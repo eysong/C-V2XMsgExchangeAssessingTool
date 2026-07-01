@@ -16,7 +16,7 @@ r_root = rx.getroot()
 t_list = []
 r_list = []
 
-#!!!!!!!!NEED TO MODIFY: SECMARK DOES RESET DUE TO OVERFLOW. MAX IS ~60K!!!!!!!!!!!!
+#NEED TO MODIFY: SECMARK DOES RESET DUE TO OVERFLOW. MAX IS ~60K!
 #Before start looping, check the timestamps of the first messages to confirm any losses
 # def get_first_msg_time():
 #     r_field = r_root.find(".//field[@name='j2735_2016.secMark']")
