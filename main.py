@@ -6,10 +6,11 @@ import re
 tx = ET.parse(r"C:\Users\sns123\Documents\C-V2I-testing-datasets-PDML\C-V2I-2024-07-30-ts1-tx-obu1-0.pdml")
 rx = ET.parse(r"C:\Users\sns123\Documents\C-V2I-testing-datasets-PDML\C-V2I-2024-07-30-ts1-rx-rsu-0.pdml")
 
+#obtain roots of trees
 t_root = tx.getroot()
 r_root = rx.getroot()
 
-# #test with condensed PDML file
+# test with condensed PDML file
 # tree = ET.parse(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\cond_tx_obu.xml")
 # root = tree.getroot()
 
