@@ -12,16 +12,24 @@ This repository is a software tool to automatically measure and assess C-V2X mes
       sudo apt update
       sudo apt install python3.12 python3.12-venv python3.12-dev -y
       ```
+2. Install Git
+  - Windows: Install [here](https://git-scm.com/install/windows)
+  - Ubuntu/Debian Linux:
+    ```
+    sudo apt update
+    sudo apt install git -y
+    ```
 
-2. Install Pandas:
-  - Windows: ```pip install pandas```
-  - Ubundu/Debian Linux:
+4. Install Pandas:
+  - Windows:
+      ```pip install pandas```
+  - Ubuntu/Debian Linux:
       ```
       sudo apt update
       sudo apt install python3-pandas
       ```
 
-3. Clone this repository:
+4. Clone this repository:
   - ```
     git clone https://github.com/eysong/C-V2XMsgExchangeAssessingTool.git
     cd C-V2XMsgExchangeAssessingTool
