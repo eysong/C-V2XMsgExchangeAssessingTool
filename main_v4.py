@@ -271,17 +271,17 @@ def final_output():
         #A message was successfully received if it exists in the receiver dictionary
         if trans_msg in r_counts:
             # Check for duplicates on the transmission side
-            if t_counts.get(trans_msg) > 1:
-                print(f"[REPEATED TX] {trans_msg} was sent {t_counts.get(trans_msg)} times.")
+            # if t_counts.get(trans_msg) > 1:
+            #     print(f"[REPEATED TX] {trans_msg} was sent {t_counts.get(trans_msg)} times.")
                 
             if trans_msg.msgType == "BSM":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {t_counts.get(trans_msg)}, Successfully Transmitted")
             elif trans_msg.msgType == "TIM":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Transmitted")
             elif trans_msg.msgType == "MAP":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Transmitted")
             elif trans_msg.msgType == "SPAT":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, {t_counts.get(trans_msg)}, Successfully Transmitted")
 
         else: #If tx message was not received, then it prints a failed status
             if trans_msg.msgType == "BSM":
@@ -297,17 +297,17 @@ def final_output():
     for indx, rec_msg in enumerate(r_counts):
         if rec_msg not in t_counts:
             # Check for duplicates on the receiver side
-            if r_counts[rec_msg] > 1:
-                print(f"[REPEATED RX] {rec_msg} was received {r_counts[rec_msg]} times from an outside source.")
+            # if r_counts[rec_msg] > 1:
+            #     print(f"[REPEATED RX] {rec_msg} was received {r_counts[rec_msg]} times from an outside source.")
                 
             if rec_msg.msgType == "BSM":
-                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.msgCnt}, {rec_msg.secMark}, Received From Different Source")
+                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.msgCnt}, {rec_msg.secMark}, {t_counts.get(trans_msg)}, Received From Different Source")
             elif rec_msg.msgType == "TIM":
-                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.lat}, {rec_msg.long}, Received From Different Source")
+                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.lat}, {rec_msg.long}, {t_counts.get(trans_msg)}, Received From Different Source")
             elif rec_msg.msgType == "MAP":
-                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.lat}, {rec_msg.long}, Received From Different Source")
+                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.lat}, {rec_msg.long}, {t_counts.get(trans_msg)}, Received From Different Source")
             elif rec_msg.msgType == "SPAT":
-                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.id}, {rec_msg.revision}, Received From Different Source")
+                print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.id}, {rec_msg.revision}, {t_counts.get(trans_msg)}, Received From Different Source")
 
 
 
