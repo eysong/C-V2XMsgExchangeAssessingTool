@@ -1,15 +1,15 @@
 class V2XMessage:
     def __init__(self, msg_type):
-        self.msgType = msg_type
+        self.msgType = msg_type #All the messages have their unique "type"
 
     def __eq__(self, other):
-        # """Defines equality based on the unique combo_id"""
+        #Checks if the contents of the class objects are equal, instead of their references
         if type(self) is not type(other):
             return False
         return self.comboID == other.comboID
     
     def __hash__(self):
-        # """Allows BSM objects to be stored and compared in sets"""
+        #Allows BSM objects to be stored and compared in sets
         return hash(self.comboID)
     
 
