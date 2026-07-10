@@ -168,6 +168,7 @@ def build_tim_id(input_str, msg_cnt, lat, long, field, field_name):
 
     return input_str, msg_cnt, lat, long
 
+
 def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
     if re.search(r"[Jj]2735(_2016)?\.msgIssueRevision", field_name):
         msg_issue_rev = field.attrib.get("show")
@@ -175,29 +176,31 @@ def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
     if re.search(r"[Jj]2735(_2016)?\.intersections", field_name):
         inter = field.attrib.get("show")
         input_str += inter
-    if re.search(r"[Jj]2735(_2016)?\.lat(_03)?", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03
+    if re.search(r"[Jj]2735(_2016)?\.lat(_03)?", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03, so I used Regex to cover both cases.
         lat = field.attrib.get("show")
         input_str += lat
-    if re.search(r"[Jj]2735(_2016)?\.long(_01)?", field_name): #Note: Old Wireshark exports .long but new one exports .long_01
+    if re.search(r"[Jj]2735(_2016)?\.long(_01)?", field_name): #Note: Old Wireshark exports .long but new one exports .long_01, so I used Regex to cover both cases.
         long = field.attrib.get("show")
         input_str += long
 
     return input_str, msg_issue_rev, inter, lat, long
 
+
 def build_spat_id(input_str, id, rev, seq_len, field, field_name):
-    if re.search(r"[Jj]2735(_2016)?\.id(_01)?", field_name):
+    if re.search(r"[Jj]2735(_2016)?\.id(_01)?", field_name): #Note: Old Wireshark exports .id but new one exports .id_01, so I used Regex to cover both cases.
         id = field.attrib.get("show")
         input_str += id
     if re.search(r"[Jj]2735(_2016)?\.revision", field_name):
         rev = field.attrib.get("show")
         input_str += rev
-    if re.search(r"[Jj]2735(_2016)?\.sequence_of_length", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03
+    if re.search(r"[Jj]2735(_2016)?\.sequence_of_length", field_name):
         seq_len = field.attrib.get("show")
         input_str += seq_len
 
     return input_str, id, rev, seq_len
 
 
+#Iterates through the fields in a proto, makes an object based off the message type, and appends it to either t_list or r_list
 def make_msg_instance(proto, pack_type):
     combo_id = ""
     field_msg_id = None
@@ -270,36 +273,29 @@ def final_output():
     for indx, trans_msg in enumerate(t_counts):
         #A message was successfully received if it exists in the receiver dictionary
         if trans_msg in r_counts:
-            # Check for duplicates on the transmission side
-            # if t_counts.get(trans_msg) > 1:
-            #     print(f"[REPEATED TX] {trans_msg} was sent {t_counts.get(trans_msg)} times.")
-                
             if trans_msg.msgType == "BSM":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {t_counts.get(trans_msg)}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {t_counts.get(trans_msg)}, Successfully Received")
             elif trans_msg.msgType == "TIM":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Received")
             elif trans_msg.msgType == "MAP":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Received")
             elif trans_msg.msgType == "SPAT":
-                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, {t_counts.get(trans_msg)}, Successfully Transmitted")
+                print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, {t_counts.get(trans_msg)}, Successfully Received")
 
         else: #If tx message was not received, then it prints a failed status
             if trans_msg.msgType == "BSM":
-                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, , , , Failed to Receive")
+                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
             elif trans_msg.msgType == "TIM":
-                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , Failed to Receive")
+                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
             elif trans_msg.msgType == "MAP":
-                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , Failed to Receive")
+                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
             elif trans_msg.msgType == "SPAT":
-                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , Failed to Receive")
+                print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
 
     #Look thru rx msg
     for indx, rec_msg in enumerate(r_counts):
+        #Notes that this message was received from another source is it wasn't found in the tx list
         if rec_msg not in t_counts:
-            # Check for duplicates on the receiver side
-            # if r_counts[rec_msg] > 1:
-            #     print(f"[REPEATED RX] {rec_msg} was received {r_counts[rec_msg]} times from an outside source.")
-                
             if rec_msg.msgType == "BSM":
                 print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.msgCnt}, {rec_msg.secMark}, {t_counts.get(trans_msg)}, Received From Different Source")
             elif rec_msg.msgType == "TIM":
