@@ -40,5 +40,5 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 5. The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
   - For instance:
     ```
-    python main.py python main_v4.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
+    python main.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
     ```
