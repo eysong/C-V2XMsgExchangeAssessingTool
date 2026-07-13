@@ -272,7 +272,7 @@ def final_output():
     #Look thru tx msg
     for indx, trans_msg in enumerate(t_counts):
         #A message was successfully received if it exists in the receiver dictionary
-        if trans_msg in r_counts:
+        if trans_msg in r_counts and trans_msg is not None:
             if trans_msg.msgType == "BSM":
                 print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {t_counts.get(trans_msg)}, Successfully Received")
             elif trans_msg.msgType == "TIM":
@@ -295,7 +295,7 @@ def final_output():
     #Look thru rx msg
     for indx, rec_msg in enumerate(r_counts):
         #Notes that this message was received from another source is it wasn't found in the tx list
-        if rec_msg not in t_counts:
+        if rec_msg not in t_counts and rec_msg is not None:
             if rec_msg.msgType == "BSM":
                 print(f"#{indx + 1}, , , , {rec_msg.msgType}, {rec_msg.msgCnt}, {rec_msg.secMark}, {t_counts.get(trans_msg)}, Received From Different Source")
             elif rec_msg.msgType == "TIM":
@@ -367,7 +367,7 @@ def main():
     if t_inpt_type == "cohda":
         analyze_cohda(t_pdml_dir, "trans")
     elif t_inpt_type == "qualcomm":
-        analyze_cohda(r_pdml_dir, "rec") #Qualcomm uses the same format as Cohda
+        analyze_cohda(r_pdml_dir, "trans") #Qualcomm uses the same format as Cohda
     elif t_inpt_type == "commsignia":
         analyze_commsignia(t_pdml_dir, "trans")
         if check_commsignia_file == False:
