@@ -1,5 +1,6 @@
 # C-V2XMsgExchangeProcessAssessmentTool
-This repository is a software tool to automatically measure and assess C-V2X message exchanging process based on SAE J2735 and IEEE 1609.3 and 1609.2 standards. 
+This repository is a software tool to automatically measure and assess C-V2X message exchanging process based on SAE J2735 and IEEE 1609.3 and 1609.2 standards. It compares the unique attributes of a transmitted packet with the received packet to confirm that the transmitted content is identical. It also determines if a packet was lost during transmission.
+
 
 ## How To Use
 ### Set-up
@@ -40,5 +41,5 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 5. The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
   - For instance:
     ```
-    python main.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
+    python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
     ```
