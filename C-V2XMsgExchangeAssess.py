@@ -355,9 +355,9 @@ def check_is_pdml(dir):
 
 def main():
     try:
-        t_inpt_type = sys.argv[1]
+        t_inpt_type = sys.argv[1].lower()
         t_pdml_dir = sys.argv[2]
-        r_inpt_type = sys.argv[3]
+        r_inpt_type = sys.argv[3].lower()
         r_pdml_dir = sys.argv[4]
     except IndexError:
         print("Error: Please follow the described input format.")
@@ -371,7 +371,7 @@ def main():
         if check_commsignia_file == False:
             print("Please provide a valid Commsignia PDML file")
             sys.exit()
-    elif t_inpt_type == "kap":
+    elif t_inpt_type == "kapsch":
         analyze_kap(t_pdml_dir, "trans")
         if check_kapsch_file == False:
             print("Please provide a valid Kapsch PDML file")
@@ -385,7 +385,7 @@ def main():
         if check_commsignia_file == False:
             print("Please provide a valid Commsignia PDML file")
             sys.exit()
-    elif r_inpt_type == "kap":
+    elif r_inpt_type == "kapsch":
         analyze_kap(r_pdml_dir, "rec")
         if check_kapsch_file == False:
             print("Please provide a valid Kapsch PDML file")
