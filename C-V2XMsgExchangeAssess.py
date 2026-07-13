@@ -366,6 +366,8 @@ def main():
 
     if t_inpt_type == "cohda":
         analyze_cohda(t_pdml_dir, "trans")
+    elif t_inpt_type == "qualcomm":
+        analyze_cohda(r_pdml_dir, "rec") #Qualcomm uses the same format as Cohda
     elif t_inpt_type == "commsignia":
         analyze_commsignia(t_pdml_dir, "trans")
         if check_commsignia_file == False:
@@ -380,6 +382,8 @@ def main():
 
     if r_inpt_type == "cohda":
         analyze_cohda(r_pdml_dir, "rec")
+    elif r_inpt_type == "qualcomm":
+        analyze_cohda(r_pdml_dir, "rec") #Qualcomm uses the same format as Cohda
     elif r_inpt_type == "commsignia":
         analyze_commsignia(r_pdml_dir, "rec")
         if check_commsignia_file == False:
