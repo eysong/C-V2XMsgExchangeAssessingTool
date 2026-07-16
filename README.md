@@ -48,7 +48,9 @@ This repository is a software tool to automatically measure and assess C-V2X mes
     ```
 
 ### Program Instructions
-5. The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
+There will be two different user input options: a pre-built user interface for simplicity or command line.
+1. GUI instructions
+2. The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
   - For instance:
     ```
     python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
