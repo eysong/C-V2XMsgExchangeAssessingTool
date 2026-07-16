@@ -53,3 +53,8 @@ This repository is a software tool to automatically measure and assess C-V2X mes
     ```
     python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
     ```
+
+## References
+- NIST Public Repository [C-V2X Interoperability Testing Datasets](https://data.nist.gov/od/id/mds2-3541)
+- 2026 OmniAir Maryland Plugfest Datasets
+- NIST Communications Technology Laboratory Division 673 Testbed Datasets
