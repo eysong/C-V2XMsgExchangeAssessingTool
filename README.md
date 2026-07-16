@@ -1,5 +1,15 @@
 # C-V2XMsgExchangeProcessAssessmentTool
-This repository is a software tool to automatically measure and assess C-V2X message exchanging process based on SAE J2735 and IEEE 1609.3 and 1609.2 standards. It compares the unique attributes of a transmitted packet with the received packet to confirm that the transmitted content is identical. It also determines if a packet was lost during transmission.
+This repository is a software tool to automatically measure and assess C-V2X message exchanging processes based on SAE J2735 and IEEE 1609.3 and 1609.2 standards. It compares the unique attributes of a transmitted packet with the received packet to confirm that the transmitted content is identical. Ultimately, this program determines if a packet was successfully sent from the sender and received by the receiver or, instead, lost during transmission. It also checks for any potential retransmitted V2X messages. The message exchange can be analyzed in three different ways involving a mix of on-board units (OBUs) and road-side units (RSUs). Specifically, it can be from OBU to OBU, OBU to RSU, or RSU to OBU, which are, respectively, vehicle-to-vehicle (V2V), vehicle-to-infrastructure (V2I), and infrastructure-to-vehicle (I2V).
+
+## Supported Vendors/Manufacturers
+- Cohda
+- Commsignia
+- Kapsch
+- Qualcomm
+- Ettifos
+- MioVision
+- Denso
+- ITTelComm
 
 
 ## How To Use
