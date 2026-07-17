@@ -24,11 +24,10 @@ This repository is a software tool to automatically measure and assess C-V2X mes
       sudo apt update
       sudo apt install python3.12 python3.12-venv python3.12-dev -y
       ```
-  - Red Hat Linux
+  - Red Hat Linux (RHEL)
     ```
     dnf install python3.12
     dnf install python3.12-pip
-    
     ```
 2. Install Git
   - Windows: Install [here](https://git-scm.com/install/windows)
@@ -36,6 +35,11 @@ This repository is a software tool to automatically measure and assess C-V2X mes
     ```
     sudo apt update
     sudo apt install git -y
+    ```
+  - RHEL:
+    ```
+    sudo dnf update -y
+    sudo dnf install git -y
     ```
 
 3. Install Pandas:
@@ -46,6 +50,10 @@ This repository is a software tool to automatically measure and assess C-V2X mes
       sudo apt update
       sudo apt install python3-pandas
       ```
+  - RHEL:
+    ```
+    pip3.12 install pandas
+    ```
 
 4. Clone this repository:
   - ```
