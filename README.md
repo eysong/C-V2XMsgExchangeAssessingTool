@@ -29,30 +29,44 @@ This repository is a software tool to automatically measure and assess C-V2X mes
     dnf install python3.12
     dnf install python3.12-pip
     ```
+  - macOS
+    ```
+    /bin/bash -c "$(curl -fsSL https://githubusercontent.com)"
+    brew install python@3.12
+    ```
 2. Install Git
   - Windows: Install [here](https://git-scm.com/install/windows)
-  - Ubuntu/Debian Linux:
+  - Ubuntu/Debian Linux
     ```
     sudo apt update
     sudo apt install git -y
     ```
-  - RHEL:
+  - RHEL
     ```
     sudo dnf update -y
     sudo dnf install git -y
+    ```
+  - macOS
+    ```
+    brew install git
     ```
 
 3. Install Pandas:
   - Windows:
       ```pip install pandas```
-  - Ubuntu/Debian Linux:
+  - Ubuntu/Debian Linux
       ```
       sudo apt update
       sudo apt install python3-pandas
       ```
-  - RHEL:
+  - RHEL
     ```
     pip3.12 install pandas
+    ```
+  - macOS
+    ```
+    pip3 install --upgrade pip
+    pip3 install pandas
     ```
 
 4. Clone this repository:
