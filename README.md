@@ -16,7 +16,7 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 ### Set-up
 1. Install Python 3.12. If you already have it, skip to the next step. If not, install Python 3.12 depending on your operating system:
   - Windows: Install [here](https://www.python.org/downloads/release/python-31212/)
-  - Ubuntu/Debian Linux — Run the following commands
+  - Ubuntu/Debian Linux — For Ubuntu versions earlier than 24.04, run all the following lines. For users with Ubuntu 24.04 or newer, skip the first three lines.
       ```
       sudo apt update
       sudo apt install software-properties-common -y
@@ -24,6 +24,12 @@ This repository is a software tool to automatically measure and assess C-V2X mes
       sudo apt update
       sudo apt install python3.12 python3.12-venv python3.12-dev -y
       ```
+  - Red Hat Linux
+    ```
+    dnf install python3.12
+    dnf install python3.12-pip
+    
+    ```
 2. Install Git
   - Windows: Install [here](https://git-scm.com/install/windows)
   - Ubuntu/Debian Linux:
