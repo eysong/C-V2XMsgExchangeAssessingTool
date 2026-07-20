@@ -93,6 +93,15 @@ There will be two different user input options: a pre-built user interface for s
     python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kapsch kap_rsu5.pdml > output.csv
     ```
 
+## Output Format
+The information on the sender and receiver ends will be printed out, respectively. The program will also display the number of repeated occurrences in which messages with identical attributes had been sent. Finally, a message will either by "Successfully Received" or "Failed to Receive".
+The specific unique attributes are dependent on the message type, as each V2X message has its own attribute that identify the message.
+The output format will be as follows.
+ - For BSM: Packet number, BSM, message count, second mark, width, length
+ - For TIM: Packet number, TIM, latitude, longitude
+ - For MAP: Packet number, MAP, latitude, longitude
+ - For SPaT: Packet number, SPAT, ID, revision number
+
 ## References
 - NIST Public Repository [C-V2X Interoperability Testing Datasets](https://data.nist.gov/od/id/mds2-3541)
 - 2026 OmniAir Maryland Plugfest Datasets
