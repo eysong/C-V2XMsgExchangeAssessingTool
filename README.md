@@ -84,11 +84,13 @@ There will be two different user input options: a pre-built user interface for s
    3. Repeat steps 1 and 2 for the Received PDML options
    4. Run the result
    5. You may save the result printed in the output box by clicking "Save as CSV"
-   
+
+-------OR-------
+
 #### The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
   - For instance:
     ```
-    python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kap kap_rsu5.pdml > output.csv
+    python C-V2XMsgExchangeAssess.py cohda kap_obu2.pdml kapsch kap_rsu5.pdml > output.csv
     ```
 
 ## References
