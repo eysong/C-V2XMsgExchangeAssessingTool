@@ -78,6 +78,7 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 ### Program Instructions
 There will be two different user input options: a pre-built user interface for simplicity or command line.
 1. GUI instructions
+   ![Screenshot of the layout of the GUI page](docs/img/gui_page.png)
 2. The input will be via Command Prompt and is formatted this way: python main.py *vendor1* *transmitter_file_name.pdml* *vendor2* *received_file_name.pdml* > output.csv
   - For instance:
     ```
