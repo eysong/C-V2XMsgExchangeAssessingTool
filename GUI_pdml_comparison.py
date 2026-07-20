@@ -3,17 +3,17 @@ import subprocess
 import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar
+from PIL import ImageTk, Image
 
-# If C-V2XMsgExchangeAssess.py is somewhere else, change this to the full path, e.g.
-# MAIN_SCRIPT = r"C:\Users\you\project\C-V2XMsgExchangeAssess.py"
+
 MAIN_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "C-V2XMsgExchangeAssess.py")
 
 
 class PdmlCompareGUI:
     def __init__(self, root):
         self.root = root
-        root.title("PDML Comparator")
-        root.geometry("720x650")
+        root.title("C-V2X Message Exchange Analyzer")
+        root.geometry("750x800")
         root.config(background = "#C4DDFF")
         try:
             self.icon = PhotoImage(file = "nist_logo.png") #Tries to set logo to NIST if pic is present
@@ -21,48 +21,62 @@ class PdmlCompareGUI:
         except Exception:
             pass #Skips otherwise
 
-        self.file1_path = tk.StringVar()
-        self.file2_path = tk.StringVar()
+        self.file1_path = tk.StringVar(value="Select a PDML file")
+        self.file2_path = tk.StringVar(value="Select a PDML file")
 
         root.columnconfigure(0, weight=0)
         root.columnconfigure(1, weight=1)
         root.columnconfigure(2, weight=0)
-        root.columnconfigure(3, weight=1)
-        root.columnconfigure(4, weight=1)
-        root.columnconfigure(5, weight=1)
-        root.columnconfigure(6, weight=2)
+        root.rowconfigure(7, weight=2)
+
+        #Title row
+        self.logo = Image.open("nist_logo_black.png").resize((200, 29))
+        self.logo = ImageTk.PhotoImage(self.logo)
+        logo_label = tk.Label(root, image=self.logo)
+        logo_label.place(x=0, y=5)
+        tk.Label(root, text="C-V2X Message Exchange Analyzer", font=("Verdana", 15)).grid(row=0, column=1, padx=8, pady=8)
 
         #File 1 row
-        tk.Label(root, text="File 1:").grid(row=0, column=0, padx=8, pady=8, sticky="w")
+        tk.Label(root, text="Transmitted PDML", font=("Verdana", 12)).grid(row=1, column=0, padx=8, pady=8, ipadx=10, sticky="w")
         self.opt1 = StringVar(value = "Select a vendor")
-        self.vendors = ["Cohda", "Commsignia", "Kapsch", "Qualcomm"]
-        tk.OptionMenu(root, self.opt1, *self.vendors).grid(row=1, column=0, padx=4, pady=8, sticky="w")
-        tk.Entry(root, textvariable=self.file1_path, width=60).grid(row=1, column=1, padx=4, pady=8, sticky="ew")
-        tk.Button(root, text="Browse...", command=self.browse_file1).grid(row=1, column=2, padx=8, pady=8, sticky="w")
+        self.vendors = ["Cohda", "Commsignia", "Kapsch", "Qualcomm", "Ettifos"]
+        self.dropdown1 = tk.OptionMenu(root, self.opt1, *self.vendors)
+        self.dropdown1.grid(row=2, column=0, padx=4, pady=8, sticky="w")
+        self.add_hover_effect(self.dropdown1, "#f0f0f0", "#E2E2E2")
+        tk.Entry(root, textvariable=self.file1_path, width=60).grid(row=2, column=1, padx=4, pady=8, sticky="ew")
+        
+        self.browse1 = tk.Button(root, text="Browse...", command=self.browse_file1)
+        self.browse1.grid(row=2, column=2, padx=8, pady=8, sticky="w")
+        self.add_hover_effect(self.browse1, "#f0f0f0", "#E2E2E2")
 
         #File 2 row
-        tk.Label(root, text="File 2:").grid(row=2, column=0, padx=8, pady=8, sticky="w")
+        tk.Label(root, text="Received PDML", font=("Verdana", 12)).grid(row=3, column=0, padx=8, pady=8, ipadx = 10, sticky="w")
         self.opt2 = StringVar(value = "Select a vendor")
-        tk.OptionMenu(root, self.opt2, *self.vendors).grid(row=3, column=0, padx=4, pady=8, sticky="w")
-        tk.Entry(root, textvariable=self.file2_path, width=60).grid(row=3, column=1, padx=4, pady=8, sticky="ew")
-        tk.Button(root, text="Browse...", command=self.browse_file2).grid(row=3, column=2, padx=8, pady=8, sticky="w")
+        self.dropdown2 = tk.OptionMenu(root, self.opt2, *self.vendors)
+        self.dropdown2.grid(row=4, column=0, padx=4, pady=8, sticky="w")
+        self.add_hover_effect(self.dropdown2, "#f0f0f0", "#E2E2E2")
+        tk.Entry(root, textvariable=self.file2_path, width=60).grid(row=4, column=1, padx=4, pady=8, sticky="ew")
+        self.browse2 = tk.Button(root, text="Browse...", command=self.browse_file2)
+        self.browse2.grid(row=4, column=2, padx=8, pady=8, sticky="w")
+        self.add_hover_effect(self.browse2, "#f0f0f0", "#E2E2E2")
 
         #Compare button
-        tk.Button(
-            root, text="Compare", command=lambda: self.run_compare(self.opt1.get(), self.opt2.get()),
-            bg="#4CAF50", fg="white", height=2, width=20
-        ).grid(row=4, column=0, columnspan=3, pady=12)
+        self.compare_btn = tk.Button(
+            root, text="Compare", font=("Calibri", 13, "bold"), command=lambda: self.run_compare(self.opt1.get(), self.opt2.get()),
+            bg="#4CAF50", fg="white", height=1, width=15)
+        self.compare_btn.grid(row=5, column=0, columnspan=3, pady=8)
+        self.add_hover_effect(self.compare_btn, "#4CAF50", "#45a049")
 
         #Output box
-        tk.Label(root, text="Result:").grid(row=5, column=0, padx=8, sticky="w")
+        tk.Label(root, text="Result:", font=("Verdana", 12)).grid(row=6, column=0, padx=8, ipadx=6, sticky="w")
         self.output_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=85, height=20)
-        self.output_box.grid(row=6, column=0, columnspan=3, padx=8, pady=4, sticky="ew")
+        self.output_box.grid(row=7, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
         self.output_box.config(background = "#e5eaf5")
 
         #Save button
-        tk.Button(root, text="Save As CSV...", command=self.save_output).grid(
-            row=7, column=0, columnspan=3, pady=8
-        )
+        self.save_btn = tk.Button(root, text="Save As CSV...", command=self.save_output)
+        self.save_btn.grid(row=8, column=0, columnspan=3, pady=8)
+        self.add_hover_effect(self.save_btn, "#f0f0f0", "#F9F9F9")
 
     def browse_file1(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
@@ -78,21 +92,23 @@ class PdmlCompareGUI:
         f1 = self.file1_path.get().strip()
         f2 = self.file2_path.get().strip()
 
-        if not f1 or not f2:
+        if f1 == "Select a PDML file" or f2 == "Select a PDML file": #Both PDML files need to be selected
             messagebox.showwarning("Missing files", "Please select both PDML files first.")
             return
-        if not os.path.isfile(MAIN_SCRIPT):
+        if not os.path.isfile(MAIN_SCRIPT): #If PDML files cannot be found
             messagebox.showerror("C-V2XMsgExchangeAssess.py not found", f"Could not find:\n{MAIN_SCRIPT}\n\n"
                                   "Edit MAIN_SCRIPT at the top of this file to point to your script.")
             return
-
+        if vendor1 == "Select a vendor" or vendor2 == "Select a vendor": #If both vendors are not selected yet
+            messagebox.showwarning("Missing vendor", "Please choose the appropriate vendors before continuing")
+            return
         self.output_box.delete("1.0", tk.END)
         self.output_box.insert(tk.END, "Running comparison, please wait...\n")
         self.root.update_idletasks()
 
         try:
             result = subprocess.run(
-                [sys.executable, MAIN_SCRIPT, vendor1, f1, vendor2, f2],
+                [sys.executable, MAIN_SCRIPT, vendor1, f1, vendor2, f2], #matches the order of parameters needed to run the program
                 capture_output=True, text=True, check=False
             )
         except Exception as e:
@@ -106,7 +122,7 @@ class PdmlCompareGUI:
             self.output_box.insert(tk.END, result.stderr or "(no error message returned)")
             return
 
-        # stdout is the CSV content your script normally redirects with '>'
+        #Prints all the message analysis to the output box
         self.output_box.insert(tk.END, result.stdout)
 
     def save_output(self):
@@ -123,6 +139,11 @@ class PdmlCompareGUI:
             with open(path, "w", newline="") as f:
                 f.write(content)
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
+
+
+    def add_hover_effect(self, button, normal_color, hover_color):
+        button.bind("<Enter>", lambda event: button.config(bg=hover_color))
+        button.bind("<Leave>", lambda event: button.config(bg=normal_color))
 
 
 if __name__ == "__main__":
