@@ -78,6 +78,11 @@ class PdmlCompareGUI:
         self.save_btn.grid(row=8, column=0, columnspan=3, pady=8)
         self.add_hover_effect(self.save_btn, "#f0f0f0", "#F9F9F9")
 
+        #View map button
+        self.map_btn = tk.Button(root, text="View Car Path", command=self.view_map)
+        self.map_btn.grid(row=8, column=2, padx=8, pady=8)
+        self.add_hover_effect(self.map_btn, "#f0f0f0", "#F9F9F9")
+
     def browse_file1(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
         if path:
@@ -140,6 +145,8 @@ class PdmlCompareGUI:
                 f.write(content)
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
 
+    def view_map(self):
+        subprocess.Popen([sys.executable, "Draw_map.py"])
 
     def add_hover_effect(self, button, normal_color, hover_color):
         button.bind("<Enter>", lambda event: button.config(bg=hover_color))
