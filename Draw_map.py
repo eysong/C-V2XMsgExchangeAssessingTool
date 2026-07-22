@@ -28,15 +28,6 @@ if not coordinates:
 map_center = coordinates[0][0]
 m = folium.Map(location=map_center, zoom_start=15)
 
-# # Trace the path
-# folium.PolyLine(
-#     locations=coordinates,
-#     color="blue",
-#     weight=5,
-#     opacity=0.8,
-#     tooltip="Car Path"
-# ).add_to(m)
-
 #Start marker
 folium.Marker(
     location=coordinates[0][0],
@@ -68,4 +59,6 @@ for coordinate in coordinates:
 ).add_to(m)
 
 #Save the map to an HTML file to view it in a browser
-m.save(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\C-V2XMsgExchangeAssessingTool\car_trajectory.html")
+m.save("car_trajectory.html")
+
+webbrowser.open_new_tab("car_trajectory.html")
