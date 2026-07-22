@@ -310,10 +310,10 @@ def final_output():
 
 # Export both lists to new txt files
 def exp_tr_lists():
-    with open(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\Output Files\t_list.txt", "w") as file:
+    with open("t_list.txt", "w") as file:
         file.write("\n".join(msg.comboID for msg in t_list))
 
-    with open(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\Output Files\r_list.txt", "w") as file:
+    with open("r_list.txt", "w") as file:
         file.write("\n".join(msg.comboID for msg in r_list))
 
 
