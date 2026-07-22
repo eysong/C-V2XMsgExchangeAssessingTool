@@ -146,7 +146,10 @@ class PdmlCompareGUI:
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
 
     def view_map(self):
-        subprocess.Popen([sys.executable, "Draw_map.py"])
+        self.map_btn.config(text="Loading...")
+        self.map_btn.update()
+        subprocess.run([sys.executable, "Draw_map.py"])
+        self.map_btn.config(text="View Car Map")
 
     def add_hover_effect(self, button, normal_color, hover_color):
         button.bind("<Enter>", lambda event: button.config(bg=hover_color))
