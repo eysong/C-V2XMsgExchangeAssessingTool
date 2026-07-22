@@ -30,7 +30,7 @@ class PdmlCompareGUI:
         root.rowconfigure(7, weight=2)
 
         #Title row
-        self.logo = Image.open("nist_logo_black.png").resize((200, 29))
+        self.logo = Image.open("NIST_CTL_logo.png").resize((160, 29))
         self.logo = ImageTk.PhotoImage(self.logo)
         logo_label = tk.Label(root, image=self.logo)
         logo_label.place(x=0, y=5)
