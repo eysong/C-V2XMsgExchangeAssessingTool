@@ -5,9 +5,14 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar
 from PIL import ImageTk, Image
 
-
 MAIN_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "C-V2XMsgExchangeAssess.py")
 
+def resource_path(relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
 
 class PdmlCompareGUI:
     def __init__(self, root):
@@ -30,7 +35,7 @@ class PdmlCompareGUI:
         root.rowconfigure(7, weight=2)
 
         #Title row
-        self.logo = Image.open("nist_logo_black.png").resize((200, 29))
+        self.logo = Image.open(resource_path("nist_logo_black.png")).resize((200, 29))
         self.logo = ImageTk.PhotoImage(self.logo)
         logo_label = tk.Label(root, image=self.logo)
         logo_label.place(x=0, y=5)
@@ -77,6 +82,7 @@ class PdmlCompareGUI:
         self.save_btn = tk.Button(root, text="Save As CSV...", command=self.save_output)
         self.save_btn.grid(row=8, column=0, columnspan=3, pady=8)
         self.add_hover_effect(self.save_btn, "#f0f0f0", "#F9F9F9")
+
 
     def browse_file1(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
@@ -144,7 +150,6 @@ class PdmlCompareGUI:
     def add_hover_effect(self, button, normal_color, hover_color):
         button.bind("<Enter>", lambda event: button.config(bg=hover_color))
         button.bind("<Leave>", lambda event: button.config(bg=normal_color))
-
 
 if __name__ == "__main__":
     root = tk.Tk()
