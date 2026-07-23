@@ -20,6 +20,12 @@ with open(csv_path, mode = "r") as file:
         status = row[2].strip().lower() == "true"
         coordinates.append(([lat, long], status))
 
+i = len(coordinates) - 1
+while coordinates[i][1] == False:
+    coordinates.pop()
+    i -= 1
+
+
 # Ensure we actually found coordinates in the file
 if not coordinates:
     raise ValueError("Error: No valid SAE J2735 coordinates were found in your PDML file!")
