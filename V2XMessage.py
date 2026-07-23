@@ -14,13 +14,16 @@ class V2XMessage:
     
 
 class BSM(V2XMessage):
-    def __init__(self, combo_id, msg_cnt, sec_mark, wid, len):
+    def __init__(self, combo_id, msg_cnt, sec_mark, wid, len, latitude, longitude):
         super().__init__(msg_type = "BSM")
         self.comboID = combo_id
         self.msgCnt = msg_cnt
         self.secMark = sec_mark
         self.width = wid
         self.length = len
+        
+        self.lat = latitude
+        self.long = longitude
     
     def __str__(self):
         return f"BSM with msgCnt: {self.msgCnt} and secMark: {self.secMark}"
