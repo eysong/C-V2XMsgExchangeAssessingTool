@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Su", "Song"
+    given-names: "Sedric", "Eugene"
+title: "C-V2X Message Exchange Process Assessment Tool"
+version: 1.0.0
+date-released: 2026-07-24
+url: "https://github.com/eysong/C-V2XMsgExchangeAssessingTool/tree/main"
