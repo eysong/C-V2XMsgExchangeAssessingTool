@@ -78,7 +78,7 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 ### Program Instructions
 There will be two different user input options: a pre-built user interface for simplicity or command line.
 #### GUI instructions
-   ![Screenshot of the layout of the GUI page](docs/img/gui_page.png)
+   ![Screenshot of the layout of the GUI page](docs/img/latest_gui_page.png)
    1. Click on the "Browse" button to select the appropriate PDML file as the sender
    2. Select the appropriate vendor from the dropdown menu on the left
    3. Repeat steps 1 and 2 for the Received PDML options
