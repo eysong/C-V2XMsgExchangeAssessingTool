@@ -1,4 +1,5 @@
 import os
+import webbrowser
 import folium
 import csv
 from pathlib import Path
@@ -70,3 +71,8 @@ for coordinate in coordinates:
 
 #Save the map to an HTML file to view it in a browser
 m.save("car_trajectory.html")
+
+
+#Automatically opens up the HTML file in a browser
+#Used in combination with the GUI button
+webbrowser.open_new_tab("car_trajectory.html")
