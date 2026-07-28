@@ -202,7 +202,7 @@ class MainPage(tk.Frame):
     def view_map(self):
         self.map_btn.config(text="Loading...")
         self.map_btn.update()
-        subprocess.run([sys.executable, "Live_map.py"])
+        subprocess.run([sys.executable, "Draw_map.py"])
         self.map_btn.config(text="View Car Map")
 
 
