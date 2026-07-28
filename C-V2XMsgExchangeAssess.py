@@ -13,6 +13,7 @@ from collections import Counter
 t_list = []
 r_list = []
 
+
 #Kapsch analyzer function
 def analyze_kap(dir, type):
     tree = ET.parse(dir)
@@ -272,11 +273,18 @@ def make_msg_instance(proto, pack_type):
             elif len(combo_id) != 0 and pack_type == "trans":
                 t_list.append(SPAT(combo_id, id, revision, sequence_of_length))
 
+def first_bsm_time(dir):
+    tree = ET.parse(dir)
+    root = tree.getroot()
+    for packet in root:
+        frame_proto = packet.find(".//proto[@name = 'frame']")
+        for field in frame_proto.iter():
+            if field.attrib.get("name") == "frame.time_utc":
+                return re.sub(r"\..*", "", field.attrib.get("show"))
 
-
-
-def final_output():
+def final_output(dir):
     with open("coords.csv", "w") as file:
+        file.write(first_bsm_time(dir)+"\n")
         # Use Counter, a subclass of dicts
         t_counts = Counter(t_list)  # Key: message object, Value: occurrences
         r_counts = Counter(r_list)
@@ -305,18 +313,6 @@ def final_output():
                     print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
                 elif trans_msg.msgType == "SPAT":
                     print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
-
-
-
-
-# Export both lists to new txt files
-def exp_tr_lists():
-    with open(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\Output Files\t_list.txt", "w") as file:
-        file.write("\n".join(msg.comboID for msg in t_list))
-
-    with open(r"C:\Users\sns123\Documents\My Code\V2X Message Exchanging Process Analyzer Tool\Output Files\r_list.txt", "w") as file:
-        file.write("\n".join(msg.comboID for msg in r_list))
-
 
 
 #Check if input PDML files for Kapsch are valid
@@ -392,11 +388,11 @@ def main():
             sys.exit(f"Please provide a valid {r_inpt_type.capitalize()} PDML file...")
         analyze_kap(r_pdml_dir, "rec")
 
-    final_output()
+
+    final_output(t_pdml_dir)
 
     end_time = time.time()
     print(f"\n\nRun time: {end_time - start_time:.3f} seconds")
-    exp_tr_lists()
 
 if __name__ == "__main__":
     main()
