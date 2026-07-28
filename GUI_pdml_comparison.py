@@ -221,11 +221,21 @@ class AboutPage(tk.Frame):
         self.title_label.pack(side="top", pady=(5, 20))
 
         # Description Body Block
-        self.about_text = tk.Label(self,
-                              text= "This tool was developed by Sedric Su under the mentorship of Eugene Song during the NIST SHIP 2026 internship program.",
+        self.about_text = tk.Message(self,
+                              text= "Use the browse buttons to select your designated transmitted and received PDML files. Then, select the appropriate vendors associated with each file from the dropdown menu. After running, you can save the comparison results to a CSV file and click on the 'View Car Map' button on the lower-right hand corner to automatically load the map.",
                               font=("Calibri", 12),
-                              bg="#ebebed")
-        self.about_text.pack(side="top", anchor="nw", padx=10, pady=5)
+                              bg="#ebebed", width=750)
+        self.about_text.pack(fill="x", expand=True, anchor="n")
+        self.about_text.bind("<Configure>", lambda event: self.about_text.configure(width=event.width))
+
+        self.credit_text = tk.Message(self,
+                                      text="This tool was developed by Sedric Su under the mentorship of Eugene Song during the NIST SHIP 2026 internship program.",
+                                      font=("Calibri", 12),
+                                      bg="#ebebed",
+                                      width=750)
+        self.credit_text.pack(fill="x", expand=True, anchor="n")
+        self.credit_text.bind("<Configure>", lambda event: self.credit_text.configure(width=event.width))
+
 
 
 if __name__ == "__main__":
