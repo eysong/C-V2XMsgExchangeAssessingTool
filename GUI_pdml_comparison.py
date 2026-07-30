@@ -1,9 +1,12 @@
 import os
 import subprocess
 import sys
+import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar
 from PIL import ImageTk, Image
+import csv
+from tabulate import tabulate
 
 MAIN_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "C-V2XMsgExchangeAssess.py")
 
@@ -20,11 +23,10 @@ def add_hover_effect(button, normal_color, hover_color):
 
 
 class C_V2X_App:
-    # The general class responsible for handling page transitions and such
     def __init__(self, root):
         self.root = root
         self.root.title("C-V2X Message Exchange Analyzer")
-        self.root.geometry("750x850")  # Slightly taller to cleanly fit the new navigation layout
+        self.root.geometry("750x850")
         self.root.config(background="#e3e9f8")
         
         try:
@@ -49,7 +51,7 @@ class C_V2X_App:
         self.pages = {}
 
         # Instantiate both frame layouts
-        for PageClass in (MainPage, AboutPage):
+        for PageClass in (MainPage, AboutPage, CSVPage):
             page_name = PageClass.__name__
             frame = PageClass(parent=container, controller=self)
             self.pages[page_name] = frame
@@ -85,8 +87,15 @@ class MainPage(tk.Frame):
             
         tk.Label(self, text="C-V2X Message Exchange Analyzer", font=("Calibri", 17), bg="#e3e9f8").grid(row=0, column=1, padx=8, pady=8)
 
+        # Button that takes user to the "ABOUT" screen
+        self.about_btn_border = tk.Frame(self, highlightbackground="#005EA2", highlightcolor="#005EA2", highlightthickness=2, bd=0)
+        self.about_btn_border.grid(row=0, column=2, padx=4, pady=8)
+        self.about_btn = tk.Button(self.about_btn_border, text="About", command=lambda: self.controller.show_page("AboutPage"), fg="#00080E", bg="#f0f0f0", bd=0)
+        self.about_btn.grid(row=0, column=2, padx=5, pady=2)
+        add_hover_effect(self.about_btn, "#f0f0f0", "#F9F9F9")
+
         # File 1 row
-        tk.Label(self, text="Transmitted PDML", font=("Calibri", 12), bg="#e3e9f8").grid(row=1, column=0, padx=8, pady=8, ipadx=5, sticky="w")
+        tk.Label(self, text="Transmitted PDML", font=("Calibri", 12), bg="#e3e9f8").grid(row=1, column=0, padx=8, pady=8, sticky="w")
         self.opt1 = StringVar(value="Select a vendor")
         self.vendors = ["Cohda", "Commsignia", "Kapsch", "Qualcomm", "Ettifos"]
         self.dropdown1 = tk.OptionMenu(self, self.opt1, *self.vendors)
@@ -95,7 +104,7 @@ class MainPage(tk.Frame):
         tk.Entry(self, textvariable=self.file1_path, width=60).grid(row=2, column=1, padx=4, pady=8, sticky="ew")
         
         self.browse1 = tk.Button(self, text="Browse...", command=self.browse_file1)
-        self.browse1.grid(row=2, column=2, padx=8, pady=8, sticky="w")
+        self.browse1.grid(row=2, column=2, padx=14, pady=8, sticky="w")
         add_hover_effect(self.browse1, "#f0f0f0", "#E2E2E2")
 
         # File 2 row
@@ -106,7 +115,7 @@ class MainPage(tk.Frame):
         add_hover_effect(self.dropdown2, "#f0f0f0", "#E2E2E2")
         tk.Entry(self, textvariable=self.file2_path, width=60).grid(row=4, column=1, padx=4, pady=8, sticky="ew")
         self.browse2 = tk.Button(self, text="Browse...", command=self.browse_file2)
-        self.browse2.grid(row=4, column=2, padx=8, pady=8, sticky="w")
+        self.browse2.grid(row=4, column=2, padx=14, pady=8, sticky="w")
         add_hover_effect(self.browse2, "#f0f0f0", "#E2E2E2")
 
         # Compare button
@@ -122,21 +131,22 @@ class MainPage(tk.Frame):
         self.output_box.grid(row=7, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
         self.output_box.config(background="#f3f5fa")
 
+
+        SMALL_BUTTON_BEFORE = "#1A365D"
+        SMALL_BUTTON_AFTER = "#0F294A"
         # Action Buttons Layout (Row 8)
-        self.save_btn = tk.Button(self, text="Save As CSV...", command=self.save_output)
+        self.save_btn = tk.Button(self, text="Save As CSV...", font=("Calibri", 12), command=self.save_output, bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
         self.save_btn.grid(row=8, column=0, columnspan=3, padx=8, pady=8, sticky="s")
-        add_hover_effect(self.save_btn, "#f0f0f0", "#F9F9F9")
+        add_hover_effect(self.save_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
-        # Button that takes user to the "ABOUT" screen
-        self.about_btn_border = tk.Frame(self, highlightbackground="#005EA2", highlightcolor="#005EA2", highlightthickness=2, bd=0)
-        self.about_btn_border.grid(row=0, column=2, padx=4, pady=8)
-        self.about_btn = tk.Button(self.about_btn_border, text="About", command=lambda: self.controller.show_page("AboutPage"), fg="#005EA2", bg="#f0f0f0", bd=0, relief="flat")
-        self.about_btn.grid(row=0, column=2, padx=5, pady=2)
-        add_hover_effect(self.about_btn, "#f0f0f0", "#F9F9F9")
 
-        self.map_btn = tk.Button(self, text="View Car Path", command=self.view_map)
+        self.map_btn = tk.Button(self, text="View Car Path", font=("Calibri", 12), command=self.view_map, bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
         self.map_btn.grid(row=8, column=2, padx=8, pady=8, sticky="e")
-        add_hover_effect(self.map_btn, "#f0f0f0", "#F9F9F9")
+        add_hover_effect(self.map_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
+
+        self.csv_btn = tk.Button(self, text="Read CSV File", font=("Calibri", 12), command=lambda: self.controller.show_page("CSVPage"), bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
+        self.csv_btn.grid(row=8, column=0, padx=8, pady=8, sticky="w")
+        add_hover_effect(self.csv_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
     def browse_file1(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
@@ -200,14 +210,211 @@ class MainPage(tk.Frame):
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
 
     def view_map(self):
+        coords_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "coords.csv")
+        if not coords_path.is_file(coords_path):
+            messagebox.showinfo("No map available", "Run a comparison first.")
+            return
         self.map_btn.config(text="Loading...")
         self.map_btn.update()
         subprocess.run([sys.executable, "Draw_map.py"])
         self.map_btn.config(text="View Car Map")
 
 
+import tkinter as tk
+from tkinter import scrolledtext, filedialog
+
+class CSVPage(tk.Frame):
+    def __init__(self, parent, controller):
+        CSV_BG_COLOR = "#e3e9f8"
+        super().__init__(parent, bg=CSV_BG_COLOR)
+        self.controller = controller
+
+        #Config base grid stretch
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        #Set up canvas + scrollbar
+        self.canvas = tk.Canvas(self, bg=CSV_BG_COLOR, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg=CSV_BG_COLOR)
+
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
+        self.scrollable_frame.bind("<Configure>", self._on_frame_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        
+        # row 0
+        self.exit_btn = tk.Button(self.scrollable_frame, text="Exit", command=lambda: self.controller.show_page("MainPage"))
+        self.exit_btn.grid(row=0, column=0, padx=5, pady=(5,1), ipadx=8, ipady=1, sticky="w")
+        if 'add_hover_effect' in globals():
+            add_hover_effect(self.exit_btn, "#f0f0f0", "#F9F9F9")
+
+        # row 1
+        self.csv_path = tk.StringVar(value="Select a CSV file")
+        self.csv_path.trace_add("write", self.auto_run_program)
+        
+        self.csv_entry = tk.Entry(self.scrollable_frame, textvariable=self.csv_path, width=60)
+        self.csv_entry.grid(row=1, column=0, columnspan=2, padx=8, pady=8, sticky="ew")
+        
+        self.browsecsv = tk.Button(self.scrollable_frame, text="Browse...", command=self.browse_csv)
+        self.browsecsv.grid(row=1, column=2, padx=8, pady=8, sticky="w")
+        if 'add_hover_effect' in globals():
+            add_hover_effect(self.browsecsv, "#f0f0f0", "#E2E2E2")
+
+        # rows 2 & 3: BSM
+        self.bsm_label = tk.Label(self.scrollable_frame, text="BSM", font=("Calibri", 12, "bold"), bg=CSV_BG_COLOR)
+        self.bsm_label.grid(row=2, column=0, padx=8, ipadx=6, sticky="w")
+        self.bsm_box = scrolledtext.ScrolledText(self.scrollable_frame, wrap=tk.WORD, height=10)
+        self.bsm_box.grid(row=3, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
+        self.bsm_box.config(background="#f3f5fa")
+
+        # rows 4 & 5: SPaT
+        self.spat_label = tk.Label(self.scrollable_frame, text="SPaT", font=("Calibri", 12, "bold"), bg=CSV_BG_COLOR)
+        self.spat_label.grid(row=4, column=0, padx=8, ipadx=6, sticky="w")
+        self.spat_box = scrolledtext.ScrolledText(self.scrollable_frame, wrap=tk.WORD, height=10)
+        self.spat_box.grid(row=5, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
+        self.spat_box.config(background="#f3f5fa")
+        
+        # rows 6 & 7: TIM
+        self.tim_label = tk.Label(self.scrollable_frame, text="TIM", font=("Calibri", 12, "bold"), bg=CSV_BG_COLOR)
+        self.tim_label.grid(row=6, column=0, padx=8, ipadx=6, sticky="w")
+        self.tim_box = scrolledtext.ScrolledText(self.scrollable_frame, wrap=tk.WORD, height=10)
+        self.tim_box.grid(row=7, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
+        self.tim_box.config(background="#f3f5fa")
+
+        # rows 8 & 9: MAP
+        self.map_label = tk.Label(self.scrollable_frame, text="MAP", font=("Calibri", 12, "bold"), bg=CSV_BG_COLOR)
+        self.map_label.grid(row=8, column=0, padx=8, ipadx=6, sticky="w")
+        self.map_box = scrolledtext.ScrolledText(self.scrollable_frame, wrap=tk.WORD, height=10)
+        self.map_box.grid(row=9, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
+        self.map_box.config(background="#f3f5fa")
+
+        # Allow textboxes stretch cleanly
+        self.scrollable_frame.columnconfigure(0, weight=1)
+        self.scrollable_frame.columnconfigure(1, weight=1)
+
+    # --- HELPER SCROLL METHODS ---
+    def _on_frame_configure(self, event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event):
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+
+    def _on_mousewheel(self, event):
+        if event.num == 4:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            self.canvas.yview_scroll(1, "units")
+        else:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    def browse_csv(self):
+        path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"), ("All files", "*.*")])
+        if path:
+            self.csv_path.set(path)
+
+    # Function to add distinguish message types in CSV and write them
+    #to their respective text boxes
+    def auto_run_program(self, *args):
+        file_path = self.csv_path.get()
+
+        if file_path == "Select a CSV file" or not file_path:
+            return
+
+        # Defining multi-row headers for diff message types
+        headers_config = {
+            "BSM": pd.MultiIndex.from_tuples([
+                ('Packet Num.', ''),
+                ('Tx', 'Msg Type'), ('Tx', 'Msg Count'), ('Tx', 'Sec. Mark'), ('Tx', 'width'), ('Tx', 'length'),
+                ('Rx', 'Msg Type'), ('Rx', 'Msg Count'), ('Rx', 'Sec. Mark'), ('Tx', 'width'), ('Tx', 'length'),
+                ('Result', 'Occurrences'), ('Result', 'Status')
+            ]),
+
+            "SPAT": pd.MultiIndex.from_tuples([
+                ('Packet Num.', ''),
+                ('Tx', 'Msg Type'), ('Tx', 'ID'), ('Tx', 'Revision Num.'),
+                ('Rx', 'Msg Type'), ('Rx', 'ID'), ('Rx', 'Revision Num.'),
+                ('Result', 'Occurrences'), ('Result', 'Status')
+            ]),
+
+            "MAP": pd.MultiIndex.from_tuples([
+                ('Packet Num.', ''),
+                ('Tx', 'Msg Type'), ('Tx', 'Latitude'), ('Tx', 'Longitude'),
+                ('Rx', 'Msg Type'), ('Rx', 'Latitude'), ('Rx', 'Longitude'),
+                ('Result', 'Occurrences'), ('Result', 'Status')
+            ]),
+
+            "TIM": pd.MultiIndex.from_tuples([
+                ('Packet Num.', ''),
+                ('Tx', 'Msg Type'), ('Tx', 'Latitude'), ('Tx', 'Longitude'),
+                ('Rx', 'Msg Type'), ('Rx', 'Latitude'), ('Rx', 'Longitude'),
+                ('Result', 'Occurrences'), ('Result', 'Status')
+            ])
+        }
+
+        filtered_data = {"BSM": [], "SPAT": [], "TIM": [], "MAP": []}
+
+        try:
+            with open(file_path, mode='r', newline='', encoding='utf-8') as file:
+                csv_reader = csv.reader(file)
+                #Skip empty rows
+                for row in csv_reader:
+                    if not row:
+                        continue
+                    
+                    #Identifies msg type
+                    msg_type = None
+                    for val in row:
+                        val_upper = str(val).upper().strip()
+                        if val_upper in filtered_data:
+                            msg_type = val_upper
+                            break
+                        
+                    if msg_type:
+                        filtered_data[msg_type].append(row)
+
+            ui_mapping = {
+                "BSM": self.bsm_box,
+                "SPAT": self.spat_box,
+                "TIM": self.tim_box,
+                "MAP": self.map_box
+            }
+
+            for msg_type, textbox in ui_mapping.items():
+                textbox.delete("1.0", tk.END)
+                rows_found = filtered_data[msg_type]
+
+                if rows_found:
+                    # Find appropriate header row
+                    columns_layout = headers_config.get(msg_type)
+
+                    if columns_layout is not None:
+                        # Unpack unique top and bottom rows
+                        header_row_1 = list(columns_layout.get_level_values(0))
+                        header_row_2 = list(columns_layout.get_level_values(1))
+
+                        table_content = [header_row_2] + rows_found
+                        formatted_table = tabulate(table_content, headers=header_row_1, tablefmt="predefined_grid")
+                        textbox.insert(tk.END, formatted_table)
+                    else:
+                        # Generic text insert backup if a config key is missing
+                        formatted_table = tabulate(rows_found, tablefmt="predefined_grid")
+                        textbox.insert(tk.END, formatted_table)
+                else:
+                    textbox.insert(tk.END, f"No records found for type: {msg_type}")
+
+        except Exception as e:
+            self.bsm_box.delete("1.0", tk.END)
+            self.bsm_box.insert(tk.END, f"Error processing message tables: {e}")
+
+
+
 class AboutPage(tk.Frame):
-    """A clean secondary screen layer to hold system properties and application metadata."""
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#ebebed")
         self.controller = controller
@@ -242,3 +449,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = C_V2X_App(root)
     root.mainloop()
+
