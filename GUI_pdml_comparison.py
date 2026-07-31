@@ -211,7 +211,7 @@ class MainPage(tk.Frame):
 
     def view_map(self):
         coords_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "coords.csv")
-        if not coords_path.is_file(coords_path):
+        if not os.path.isfile(coords_path):
             messagebox.showinfo("No map available", "Run a comparison first.")
             return
         self.map_btn.config(text="Loading...")
@@ -330,8 +330,8 @@ class CSVPage(tk.Frame):
         headers_config = {
             "BSM": pd.MultiIndex.from_tuples([
                 ('Packet Num.', ''),
-                ('Tx', 'Msg Type'), ('Tx', 'Msg Count'), ('Tx', 'Sec. Mark'), ('Tx', 'width'), ('Tx', 'length'),
-                ('Rx', 'Msg Type'), ('Rx', 'Msg Count'), ('Rx', 'Sec. Mark'), ('Tx', 'width'), ('Tx', 'length'),
+                ('Tx', 'Msg Type'), ('Tx', 'Msg Count'), ('Tx', 'Sec. Mark'), ('Tx', 'Width'), ('Tx', 'Length'),
+                ('Rx', 'Msg Type'), ('Rx', 'Msg Count'), ('Rx', 'Sec. Mark'), ('Tx', 'Width'), ('Tx', 'Length'),
                 ('Result', 'Occurrences'), ('Result', 'Status')
             ]),
 
@@ -388,22 +388,24 @@ class CSVPage(tk.Frame):
             for msg_type, textbox in ui_mapping.items():
                 textbox.delete("1.0", tk.END)
                 rows_found = filtered_data[msg_type]
-
                 if rows_found:
-                    # Find appropriate header row
                     columns_layout = headers_config.get(msg_type)
-
+                
                     if columns_layout is not None:
-                        # Unpack unique top and bottom rows
-                        header_row_1 = list(columns_layout.get_level_values(0))
-                        header_row_2 = list(columns_layout.get_level_values(1))
-
-                        table_content = [header_row_2] + rows_found
-                        formatted_table = tabulate(table_content, headers=header_row_1, tablefmt="predefined_grid")
+                        combined_headers = []
+                        for top, bot in columns_layout:
+                            header_text = f"{top}\n{bot}".strip() #New line approach to resemble 2 rows of headers
+                            combined_headers.append(header_text)
+                
+                        table_content = rows_found
+                        
+                        formatted_table = tabulate(table_content, headers=combined_headers, tablefmt="pretty")
                         textbox.insert(tk.END, formatted_table)
+
+
                     else:
                         # Generic text insert backup if a config key is missing
-                        formatted_table = tabulate(rows_found, tablefmt="predefined_grid")
+                        formatted_table = tabulate(rows_found, tablefmt="pretty")
                         textbox.insert(tk.END, formatted_table)
                 else:
                     textbox.insert(tk.END, f"No records found for type: {msg_type}")
