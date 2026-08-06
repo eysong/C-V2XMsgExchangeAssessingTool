@@ -86,7 +86,7 @@ m = folium.Map(location=coordinates[0][0], zoom_start=16)
 # Configs for rendering animation steps
 TimestampedGeoJson(
     geojson_data,
-    period="PT10S",
+    period="PT10S", #BSM frequency is 10 Hz, so gap is 100 ms
     duration=None,
     add_last_point=True,
     auto_play=True,
@@ -109,7 +109,7 @@ folium.Marker(
     icon=folium.Icon(color="red", icon="stop")
 ).add_to(m)
 
-m.save("colored_car_path.html")
+
 
 
 
