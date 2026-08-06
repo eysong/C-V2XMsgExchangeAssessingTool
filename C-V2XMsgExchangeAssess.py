@@ -294,25 +294,28 @@ def final_output(dir):
             #A message was successfully received if it exists in the receiver dictionary
             if trans_msg in r_counts and trans_msg is not None:
                 if trans_msg.msgType == "BSM":
-                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, {t_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, {r_counts.get(trans_msg)}, Successfully Received")
                     file.write(f"{trans_msg.lat}, {trans_msg.long}, True\n")
                 elif trans_msg.msgType == "TIM":
-                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {r_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg) - r_counts.get(trans_msg)}, Failed to Receive")
                 elif trans_msg.msgType == "MAP":
-                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {t_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.lat}, {trans_msg.long}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, {r_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg) - r_counts.get(trans_msg)}, Failed to Receive")
                 elif trans_msg.msgType == "SPAT":
-                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, {t_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType} , {trans_msg.id}, {trans_msg.revision}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, {r_counts.get(trans_msg)}, Successfully Received")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {t_counts.get(trans_msg) - r_counts.get(trans_msg)}, Failed to Receive")
 
             else: #If tx message was not received, then it prints a failed status
                 if trans_msg.msgType == "BSM":
-                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, , , , , , {t_counts.get(trans_msg)}, Failed to Receive")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.msgCnt}, {trans_msg.secMark}, {trans_msg.width}, {trans_msg.length}, , , , , , {r_counts.get(trans_msg)}, Failed to Receive")
                     file.write(f"{trans_msg.lat}, {trans_msg.long}, False\n")
                 elif trans_msg.msgType == "TIM":
-                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {r_counts.get(trans_msg)}, Failed to Receive")
                 elif trans_msg.msgType == "MAP":
-                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.lat}, {trans_msg.long}, , , , {r_counts.get(trans_msg)}, Failed to Receive")
                 elif trans_msg.msgType == "SPAT":
-                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {t_counts.get(trans_msg)}, Failed to Receive")
+                    print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {r_counts.get(trans_msg)}, Failed to Receive")
 
 
 #Check if input PDML files for Kapsch are valid
