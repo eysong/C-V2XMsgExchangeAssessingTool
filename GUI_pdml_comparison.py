@@ -3,10 +3,17 @@ import subprocess
 import sys
 import pandas as pd
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar
+from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar, ttk
+import tkinter.font as tkfont
 from PIL import ImageTk, Image
 import csv
 from tabulate import tabulate
+
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+    DND_AVAILABLE = True
+except ImportError:
+    DND_AVAILABLE = False
 
 MAIN_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "C-V2XMsgExchangeAssess.py")
 
@@ -21,6 +28,62 @@ def add_hover_effect(button, normal_color, hover_color):
     button.bind("<Enter>", lambda event: button.config(bg=hover_color))
     button.bind("<Leave>", lambda event: button.config(bg=normal_color))
 
+def enable_file_drop(widget, target_var, normal_bg="white", hover_bg="#d9e8fb"):
+    if not DND_AVAILABLE:
+        return
+
+    widget.drop_target_register(DND_FILES)
+
+    def on_enter(event):
+        widget.config(background=hover_bg)
+
+    def on_leave(event):
+        widget.config(background=normal_bg)
+
+    def on_drop(event):
+        widget.config(background=normal_bg)
+        paths = widget.tk.splitlist(event.data)
+        if paths:
+            target_var.set(paths[0])
+
+    widget.dnd_bind("<<DropEnter>>", on_enter)
+    widget.dnd_bind("<<DropLeave>>", on_leave)
+    widget.dnd_bind("<<Drop>>", on_drop)
+
+
+def create_drop_zone(parent, target_var, browse_command, height=44):
+    NORMAL_BG = "#f3f5fa"
+    HOVER_BG = "#d9e8fb"
+
+    canvas = tk.Canvas(parent, height=height, bg=NORMAL_BG, highlightthickness=0, cursor="hand2")
+
+    label_text = "Drag & drop PDML file here, or" if DND_AVAILABLE else "Select a PDML file:"
+    label_font = tkfont.Font(family="Calibri", size=10)
+
+    browse_btn = tk.Button(canvas, text="Browse...", command=browse_command)
+    add_hover_effect(browse_btn, "#f0f0f0", "#E2E2E2")
+
+    def redraw(event=None):
+        canvas.delete("all")
+        w, h = canvas.winfo_width(), canvas.winfo_height()
+        if w < 2 or h < 2:
+            return
+        canvas.create_rectangle(2, 2, w - 2, h - 2, dash=(6, 3), outline="#8a94a6", width=2)
+
+        text_width = label_font.measure(label_text)
+        btn_width = browse_btn.winfo_reqwidth()
+        gap = 8
+        start_x = (w - (text_width + gap + btn_width)) / 2
+
+        canvas.create_text(start_x, h / 2, text=label_text, anchor="w", fill="#5b6472", font=label_font)
+        canvas.create_window(start_x + text_width + gap, h / 2, window=browse_btn, anchor="w")
+
+    canvas.bind("<Configure>", redraw)
+    canvas.bind("<Button-1>", lambda event: browse_command())
+
+    enable_file_drop(canvas, target_var, normal_bg=NORMAL_BG, hover_bg=HOVER_BG)
+
+    return canvas
 
 class C_V2X_App:
     def __init__(self, root):
@@ -35,7 +98,6 @@ class C_V2X_App:
         except Exception:
             pass
 
-        # Global Image caching to prevent garbage collection bugs in tkinter frames
         try:
             self.logo_img = Image.open("NIST_CTL_logo.png").resize((160, 29))
             self.logo_photo = ImageTk.PhotoImage(self.logo_img)
@@ -67,85 +129,98 @@ class C_V2X_App:
 
 #The main page for all the analysis
 class MainPage(tk.Frame):
-    """Contains all your original C-V2X parsing and rendering visual widgets."""
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#e3e9f8")
         self.controller = controller
 
-        self.file1_path = tk.StringVar(value="Select a PDML file")
-        self.file2_path = tk.StringVar(value="Select a PDML file")
+        self.file1_placeholder = "Please select a Transmitted PDML file"
+        self.file1_path = tk.StringVar(value=self.file1_placeholder)
+        self.file2_placeholder = "Please select a Received PDML file"
+        self.file2_path = tk.StringVar(value=self.file2_placeholder)
 
         self.columnconfigure(0, weight=0)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=0)
-        self.rowconfigure(7, weight=2)
+        self.rowconfigure(12, weight=2)
 
         # Title row (pulls cached logo asset safely from controller)
         if self.controller.logo_photo:
             logo_label = tk.Label(self, image=self.controller.logo_photo, bg="#e3e9f8")
-            logo_label.place(x=0, y=5)
-            
-        tk.Label(self, text="C-V2X Message Exchange Analyzer", font=("Calibri", 17), bg="#e3e9f8").grid(row=0, column=1, padx=8, pady=8)
+            logo_label.place(x=10, y=8)
+
+        tk.Label(self, text="C-V2X Message Exchange Analyzer", font=("Calibri", 17, "bold"), bg="#e3e9f8").grid(row=0, column=1, padx=8, pady=8)
 
         # Button that takes user to the "ABOUT" screen
         self.about_btn_border = tk.Frame(self, highlightbackground="#005EA2", highlightcolor="#005EA2", highlightthickness=2, bd=0)
         self.about_btn_border.grid(row=0, column=2, padx=4, pady=8)
         self.about_btn = tk.Button(self.about_btn_border, text="About", command=lambda: self.controller.show_page("AboutPage"), fg="#00080E", bg="#f0f0f0", bd=0)
-        self.about_btn.grid(row=0, column=2, padx=5, pady=2)
+        self.about_btn.grid(row=0, column=2, padx=2, pady=2, sticky="e")
         add_hover_effect(self.about_btn, "#f0f0f0", "#F9F9F9")
 
+        # Separator above the Tx PDML section
+        ttk.Separator(self, orient="horizontal").grid(row=1, column=0, columnspan=3, padx=1, pady=(2, 2), sticky="ew")
+
         # File 1 row
-        tk.Label(self, text="Transmitted PDML", font=("Calibri", 12), bg="#e3e9f8").grid(row=1, column=0, padx=8, pady=8, sticky="w")
+        tk.Label(self, text="Transmitted PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=2, column=0, columnspan=3, padx=8, pady=(2, 2))
         self.opt1 = StringVar(value="Select a vendor")
         self.vendors = ["Cohda", "Commsignia", "Kapsch", "Qualcomm", "Ettifos"]
         self.dropdown1 = tk.OptionMenu(self, self.opt1, *self.vendors)
-        self.dropdown1.grid(row=2, column=0, padx=4, pady=8, sticky="w")
+        self.dropdown1.grid(row=3, column=0, padx=4, pady=(2, 8), sticky="w")
         add_hover_effect(self.dropdown1, "#f0f0f0", "#E2E2E2")
-        tk.Entry(self, textvariable=self.file1_path, width=60).grid(row=2, column=1, padx=4, pady=8, sticky="ew")
-        
-        self.browse1 = tk.Button(self, text="Browse...", command=self.browse_file1)
-        self.browse1.grid(row=2, column=2, padx=14, pady=8, sticky="w")
-        add_hover_effect(self.browse1, "#f0f0f0", "#E2E2E2")
+        self.entry1 = tk.Label(self, textvariable=self.file1_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
+        self.entry1.grid(row=3, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
+        self.file1_path.trace_add("write", self.update_file1_font)
+
+        self.dropzone1 = create_drop_zone(self, self.file1_path, self.browse_file1)
+        self.dropzone1.grid(row=4, column=0, columnspan=3, padx=8, pady=(0, 8), sticky="ew")
+
+        # Separator between the Tx and Rx sections
+        ttk.Separator(self, orient="horizontal").grid(row=5, column=0, columnspan=3, padx=8, pady=(2, 2), sticky="ew")
 
         # File 2 row
-        tk.Label(self, text="Received PDML", font=("Calibri", 12), bg="#e3e9f8").grid(row=3, column=0, padx=8, pady=8, ipadx=5, sticky="w")
+        tk.Label(self, text="Received PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=6, column=0, columnspan=3, padx=8, pady=(2, 2))
         self.opt2 = StringVar(value="Select a vendor")
         self.dropdown2 = tk.OptionMenu(self, self.opt2, *self.vendors)
-        self.dropdown2.grid(row=4, column=0, padx=4, pady=8, sticky="w")
+        self.dropdown2.grid(row=7, column=0, padx=4, pady=(2, 8), sticky="w")
         add_hover_effect(self.dropdown2, "#f0f0f0", "#E2E2E2")
-        tk.Entry(self, textvariable=self.file2_path, width=60).grid(row=4, column=1, padx=4, pady=8, sticky="ew")
-        self.browse2 = tk.Button(self, text="Browse...", command=self.browse_file2)
-        self.browse2.grid(row=4, column=2, padx=14, pady=8, sticky="w")
-        add_hover_effect(self.browse2, "#f0f0f0", "#E2E2E2")
+        self.entry2 = tk.Label(self, textvariable=self.file2_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
+        self.entry2.grid(row=7, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
+        self.file2_path.trace_add("write", self.update_file2_font)
+
+        self.dropzone2 = create_drop_zone(self, self.file2_path, self.browse_file2)
+        self.dropzone2.grid(row=8, column=0, columnspan=3, padx=8, pady=(0, 8), sticky="ew")
+
+        # Separator below the Rx PDML section
+        ttk.Separator(self, orient="horizontal").grid(row=9, column=0, columnspan=3, padx=8, pady=(2, 6), sticky="ew")
 
         # Compare button
         self.compare_btn = tk.Button(
             self, text="Compare", font=("Calibri", 16, "bold"), command=lambda: self.run_compare(self.opt1.get(), self.opt2.get()),
             bg="#005EA2", fg="white", height=1, width=15)
-        self.compare_btn.grid(row=5, column=0, columnspan=3, pady=8)
+        self.compare_btn.grid(row=10, column=0, columnspan=3, pady=8)
         add_hover_effect(self.compare_btn, "#005EA2", "#1A4480")
 
         # Output box
-        tk.Label(self, text="Result:", font=("Calibri", 12), bg="#e3e9f8").grid(row=6, column=0, padx=8, ipadx=6, sticky="w")
+        tk.Label(self, text="Result:", font=("Calibri", 14), bg="#e3e9f8").grid(row=11, column=0, padx=8, ipadx=6, sticky="w")
         self.output_box = scrolledtext.ScrolledText(self, wrap=tk.WORD, width=85, height=20)
-        self.output_box.grid(row=7, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
+        self.output_box.grid(row=12, column=0, columnspan=3, padx=8, pady=4, sticky="nsew")
         self.output_box.config(background="#f3f5fa")
 
 
         SMALL_BUTTON_BEFORE = "#1A365D"
         SMALL_BUTTON_AFTER = "#0F294A"
-        # Action Buttons Layout (Row 8)
+        # Action Buttons Layout (Row 13)
         self.save_btn = tk.Button(self, text="Save As CSV...", font=("Calibri", 12), command=self.save_output, bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
-        self.save_btn.grid(row=8, column=0, columnspan=3, padx=8, pady=8, sticky="s")
+        self.save_btn.grid(row=13, column=0, columnspan=3, padx=8, pady=8, sticky="s")
         add_hover_effect(self.save_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
 
         self.map_btn = tk.Button(self, text="View Car Path", font=("Calibri", 12), command=self.view_map, bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
-        self.map_btn.grid(row=8, column=2, padx=8, pady=8, sticky="e")
+        self.map_btn.grid(row=13, column=2, padx=8, pady=8, sticky="e")
         add_hover_effect(self.map_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
         self.csv_btn = tk.Button(self, text="Read CSV File", font=("Calibri", 12), command=lambda: self.controller.show_page("CSVPage"), bg=SMALL_BUTTON_BEFORE, fg="white", height=1, width=13)
-        self.csv_btn.grid(row=8, column=0, padx=8, pady=8, sticky="w")
+        self.csv_btn.grid(row=13, column=0, padx=8, pady=8, sticky="w")
         add_hover_effect(self.csv_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
     def browse_file1(self):
@@ -153,16 +228,26 @@ class MainPage(tk.Frame):
         if path:
             self.file1_path.set(path)
 
+    def update_file1_font(self, *args):
+        is_placeholder = self.file1_path.get() == self.file1_placeholder
+        style = "italic" if is_placeholder else "roman"
+        self.entry1.config(font=("Calibri", 12, style))
+
     def browse_file2(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
         if path:
             self.file2_path.set(path)
 
+    def update_file2_font(self, *args):
+        is_placeholder = self.file2_path.get() == self.file2_placeholder
+        style = "italic" if is_placeholder else "roman"
+        self.entry2.config(font=("Calibri", 12, style))
+
     def run_compare(self, vendor1, vendor2):
         f1 = self.file1_path.get().strip()
         f2 = self.file2_path.get().strip()
 
-        if f1 == "Select a PDML file" or f2 == "Select a PDML file":
+        if not os.path.isfile(f1) or not os.path.isfile(f2):
             messagebox.showwarning("Missing files", "Please select both PDML files first.")
             return
         if not os.path.isfile(MAIN_SCRIPT):
@@ -220,9 +305,7 @@ class MainPage(tk.Frame):
         self.map_btn.config(text="View Car Map")
 
 
-import tkinter as tk
-from tkinter import scrolledtext, filedialog
-
+# Page to import & view formatted CSV of packets
 class CSVPage(tk.Frame):
     def __init__(self, parent, controller):
         CSV_BG_COLOR = "#e3e9f8"
@@ -255,12 +338,14 @@ class CSVPage(tk.Frame):
             add_hover_effect(self.exit_btn, "#f0f0f0", "#F9F9F9")
 
         # row 1
-        self.csv_path = tk.StringVar(value="Select a CSV file")
+        csv_placeholder = "Select or drag & drop a CSV file" if DND_AVAILABLE else "Select a CSV file"
+        self.csv_path = tk.StringVar(value=csv_placeholder)
         self.csv_path.trace_add("write", self.auto_run_program)
-        
+
         self.csv_entry = tk.Entry(self.scrollable_frame, textvariable=self.csv_path, width=60)
         self.csv_entry.grid(row=1, column=0, columnspan=2, padx=8, pady=8, sticky="ew")
-        
+        enable_file_drop(self.csv_entry, self.csv_path)
+
         self.browsecsv = tk.Button(self.scrollable_frame, text="Browse...", command=self.browse_csv)
         self.browsecsv.grid(row=1, column=2, padx=8, pady=8, sticky="w")
         if 'add_hover_effect' in globals():
@@ -298,7 +383,7 @@ class CSVPage(tk.Frame):
         self.scrollable_frame.columnconfigure(0, weight=1)
         self.scrollable_frame.columnconfigure(1, weight=1)
 
-    # --- HELPER SCROLL METHODS ---
+    #Helper scroll func.
     def _on_frame_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
@@ -323,10 +408,10 @@ class CSVPage(tk.Frame):
     def auto_run_program(self, *args):
         file_path = self.csv_path.get()
 
-        if file_path == "Select a CSV file" or not file_path:
+        if not file_path or not os.path.isfile(file_path):
             return
 
-        # Defining multi-row headers for diff message types
+        # Defining multi-row headers for different message types
         headers_config = {
             "BSM": pd.MultiIndex.from_tuples([
                 ('Packet Num.', ''),
@@ -414,8 +499,6 @@ class CSVPage(tk.Frame):
             self.bsm_box.delete("1.0", tk.END)
             self.bsm_box.insert(tk.END, f"Error processing message tables: {e}")
 
-
-
 class AboutPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#ebebed")
@@ -431,7 +514,7 @@ class AboutPage(tk.Frame):
 
         # Description Body Block
         self.about_text = tk.Message(self,
-                              text= "Use the browse buttons to select your designated transmitted and received PDML files. Then, select the appropriate vendors associated with each file from the dropdown menu. After running, you can save the comparison results to a CSV file and click on the 'View Car Map' button on the lower-right hand corner to automatically load the map.",
+                              text= "This is an open-source software tool that automatically analyzes the V2X message exchange process between the sender and receiver based on the dataset in the PDML format and allows for the visualization of the results on an interactive geographic map.\n\n\nUse the browse buttons or drag & drop to select your designated transmitted and received PDML files. Then, select the appropriate vendors associated with each file from the dropdown menu. After running, you can save the comparison results to a CSV file and click on the 'View Car Map' button on the lower-right hand corner to automatically load the map.",
                               font=("Calibri", 12),
                               bg="#ebebed", width=750)
         self.about_text.pack(fill="x", expand=True, anchor="n")
@@ -445,10 +528,7 @@ class AboutPage(tk.Frame):
         self.credit_text.pack(fill="x", expand=True, anchor="n")
         self.credit_text.bind("<Configure>", lambda event: self.credit_text.configure(width=event.width))
 
-
-
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = TkinterDnD.Tk() if DND_AVAILABLE else tk.Tk()
     app = C_V2X_App(root)
     root.mainloop()
-
