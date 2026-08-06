@@ -79,11 +79,12 @@ This repository is a software tool to automatically measure and assess C-V2X mes
 There will be two different user input options: a pre-built user interface for simplicity or command line.
 #### GUI instructions
    ![Screenshot of the layout of the GUI page](docs/img/latest_gui_page.png)
-   1. Click on the "Browse" button to select the appropriate PDML file as the sender
-   2. Select the appropriate vendor from the dropdown menu on the left
-   3. Repeat steps 1 and 2 for the Received PDML options
-   4. Run the result
-   5. You may save the result printed in the output box by clicking "Save as CSV"
+   1. Load the GUI program called ***GUI_pdml_comparison.py***
+   2. Click on the "Browse" button to select the appropriate PDML file as the sender
+   3. Select the appropriate vendor from the dropdown menu on the left
+   4. Repeat steps 1 and 2 for the Received PDML options
+   5. Run the result
+   6. You may save the result printed in the output box by clicking "Save as CSV"
 
 -------OR-------
 
