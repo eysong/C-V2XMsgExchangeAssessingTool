@@ -162,11 +162,6 @@ class MainPage(tk.Frame):
 
         # File 1 row
         tk.Label(self, text="Transmitted PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=2, column=0, columnspan=3, padx=8, pady=(2, 2))
-        self.opt1 = StringVar(value="Select a vendor")
-        self.vendors = ["Cohda", "Commsignia", "Kapsch", "Qualcomm", "Ettifos"]
-        self.dropdown1 = tk.OptionMenu(self, self.opt1, *self.vendors)
-        self.dropdown1.grid(row=3, column=0, padx=4, pady=(2, 8), sticky="w")
-        add_hover_effect(self.dropdown1, "#f0f0f0", "#E2E2E2")
         self.entry1 = tk.Label(self, textvariable=self.file1_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
         self.entry1.grid(row=3, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
         self.file1_path.trace_add("write", self.update_file1_font)
@@ -179,10 +174,6 @@ class MainPage(tk.Frame):
 
         # File 2 row
         tk.Label(self, text="Received PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=6, column=0, columnspan=3, padx=8, pady=(2, 2))
-        self.opt2 = StringVar(value="Select a vendor")
-        self.dropdown2 = tk.OptionMenu(self, self.opt2, *self.vendors)
-        self.dropdown2.grid(row=7, column=0, padx=4, pady=(2, 8), sticky="w")
-        add_hover_effect(self.dropdown2, "#f0f0f0", "#E2E2E2")
         self.entry2 = tk.Label(self, textvariable=self.file2_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
         self.entry2.grid(row=7, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
         self.file2_path.trace_add("write", self.update_file2_font)
@@ -195,7 +186,7 @@ class MainPage(tk.Frame):
 
         # Compare button
         self.compare_btn = tk.Button(
-            self, text="Compare", font=("Calibri", 16, "bold"), command=lambda: self.run_compare(self.opt1.get(), self.opt2.get()),
+            self, text="Compare", font=("Calibri", 16, "bold"), command=lambda: self.run_compare(),
             bg="#005EA2", fg="white", height=1, width=15)
         self.compare_btn.grid(row=10, column=0, columnspan=3, pady=8)
         add_hover_effect(self.compare_btn, "#005EA2", "#1A4480")
@@ -243,7 +234,7 @@ class MainPage(tk.Frame):
         style = "italic" if is_placeholder else "roman"
         self.entry2.config(font=("Calibri", 12, style))
 
-    def run_compare(self, vendor1, vendor2):
+    def run_compare(self):
         f1 = self.file1_path.get().strip()
         f2 = self.file2_path.get().strip()
 
@@ -254,16 +245,13 @@ class MainPage(tk.Frame):
             messagebox.showerror("C-V2XMsgExchangeAssess.py not found", f"Could not find:\n{MAIN_SCRIPT}\n\n"
                                   "Edit MAIN_SCRIPT at the top of this file to point to your script.")
             return
-        if vendor1 == "Select a vendor" or vendor2 == "Select a vendor":
-            messagebox.showwarning("Missing vendor", "Please choose the appropriate vendors before continuing")
-            return
         self.output_box.delete("1.0", tk.END)
         self.output_box.insert(tk.END, "Running comparison, please wait...\n")
         self.controller.root.update_idletasks()
 
         try:
             result = subprocess.run(
-                [sys.executable, MAIN_SCRIPT, vendor1, f1, vendor2, f2],
+                [sys.executable, MAIN_SCRIPT, f1, f2],
                 capture_output=True, text=True, check=False
             )
         except Exception as e:
@@ -514,7 +502,7 @@ class AboutPage(tk.Frame):
 
         # Description Body Block
         self.about_text = tk.Message(self,
-                              text= "This is an open-source software tool that automatically analyzes the V2X message exchange process between the sender and receiver based on the dataset in the PDML format and allows for the visualization of the results on an interactive geographic map.\n\n\nUse the browse buttons or drag & drop to select your designated transmitted and received PDML files. Then, select the appropriate vendors associated with each file from the dropdown menu. After running, you can save the comparison results to a CSV file and click on the 'View Car Map' button on the lower-right hand corner to automatically load the map.",
+                              text= "This is an open-source software tool that automatically analyzes the V2X message exchange process between the sender and receiver based on the dataset in the PDML format and allows for the visualization of the results on an interactive geographic map.\n\n\nUse the browse buttons or drag & drop to select your designated transmitted and received PDML files. After running, you can save the comparison results to a CSV file and click on the 'View Car Map' button on the lower-right hand corner to automatically load the map.",
                               font=("Calibri", 12),
                               bg="#ebebed", width=750)
         self.about_text.pack(fill="x", expand=True, anchor="n")
