@@ -14,139 +14,71 @@ t_list = []
 r_list = []
 
 
-#Kapsch analyzer function
-def analyze_kap(dir, type):
-    tree = ET.parse(dir)
-    root = tree.getroot()
-    global t_list
-    global r_list
+# Returns a dict for whichever of input field names are present in the element
+def get_field_values(element, field_names):
+    result = {}
+    for field in element.iter("field"):
+        name = field.attrib.get("name")
+        if name in field_names and name not in result:
+            result[name] = field.attrib.get("show") #updates the name in result dict
+    return result
 
-    #Find the IP of the device to know in the future if the device is either the recipient or source of a packet
-    ip_device = ""
+
+# Determines this device's ipv6 address by finding its 1st broadcasted packet
+def find_device_ip(root):
     for packet in root:
-        ipv6_proto = packet.find(".//proto[@name = 'ipv6']") #Finds proto of ipv6
-        if ipv6_proto is not None:
-            ip_rec = re.search(r"Dst:\s.*", ipv6_proto.attrib.get("showname")).group().replace("Dst: ", "") #Uses RegEx to strip away extras and leave only the IP
-            if "ff01" in ip_rec or "ff02" in ip_rec: #If message is broadcasted, then the IP of the device will be the source in this case
-                #Once the IP of this device is obtained, the loop has served its job and breaks
-                ip_device = re.search(r"Src:\s.*,", ipv6_proto.attrib.get("showname")).group().replace("Src: ", "")[:-1] 
-            break
-
-    #Search for packets transmitted by the Kapsch
-    if type == "trans":
-        #Actual traversing thru each packet to determine sent packets
-        for packet in root:
-            packet_type = None
-            ipv6_proto = packet.find(".//proto[@name = 'ipv6']")
-            if ipv6_proto is not None:
-                match = re.search(r"Src:\s.*,", ipv6_proto.attrib.get("showname"))
-                if match is not None:
-                    if ip_device in match.group():
-                        packet_type = "trans"
-
-            j2735_proto = packet.find(".//proto[@name = 'j2735']")
-            if j2735_proto is not None and packet_type is not None:
-                make_msg_instance(j2735_proto, packet_type) #Makes the appropriate class object for the message type and adds it to t_list
-
-    #This is used when the recipient is Kapsch branded
-    elif type == "rec":
-        #Actual traversing thru each packet to determine sent packets
-        for packet in root:
-            packet_type = None
-            ipv6_proto = packet.find(".//proto[@name = 'ipv6']")
-            if ipv6_proto is not None:
-                match = re.search(r"Dst:\s.*", ipv6_proto.attrib.get("showname"))
-                if match is not None:
-                    if ip_device in match.group():
-                        packet_type = "rec"
-
-            j2735_proto = packet.find(".//proto[@name = 'j2735']")
-            if j2735_proto is not None and packet_type is not None:
-                make_msg_instance(j2735_proto, packet_type) #Makes the appropriate class object for the message type and adds it to r_list
+        fields = get_field_values(packet, {"ipv6.src", "ipv6.dst"})
+        dst = fields.get("ipv6.dst")
+        if dst is not None and ("ff01" in dst or "ff02" in dst): #broadcast dst means this packet's source is the device itself
+            return fields.get("ipv6.src")
+    return None
 
 
+# Finds the SAE J2735 proto layer in a packet, regardless of the dissector version
+def find_j2735_proto(packet):
+    for proto in packet.iter("proto"):
+        name = proto.attrib.get("name")
+        if name is not None and re.match(r"j2735(_2016)?$", name):
+            return proto
+    return None
 
 
-#Commsignia
-def analyze_commsignia(dir, type):
+# Unified analyzer method for all vendors
+def analyze_pdml(dir, type):
     tree = ET.parse(dir)
     root = tree.getroot()
-
-    global t_list
-    global r_list
-    
-    #Search for packets transmitted by the OBU
-    if type == "trans":
-        for packet in root:
-            packet_type = None
-            c2p_proto = packet.find(".//proto[@name = 'c2p']")
-            if c2p_proto is not None:
-                match = re.search(r"\bType:\s[TRN][a-z]+\b", c2p_proto.attrib.get("showname"))
-                if match:
-                    if "Transmitted" in match.group():
-                        packet_type = "trans"
-
-            #check SAE J2735 protocol
-            j2735_proto = packet.find(".//proto[@name = 'j2735']")
-            if j2735_proto is not None and packet_type is not None:
-                make_msg_instance(j2735_proto, packet_type)
-
-
-    #Search for packets received by the RSU
-    elif type == "rec":
-        for packet in root:
-            packet_type = None
-            c2p_proto = packet.find(".//proto[@name = 'c2p']") #if protocol name is c2p, which is unique to commsignia
-            if c2p_proto is not None:
-                match = re.search(r"\bType:\s[TRN][a-z]+\b", c2p_proto.attrib.get("showname"))
-                if match:
-                    if "Received" in match.group():
-                        packet_type = "rec"
-
-            #check SAE J2735 protocol
-            j2735_proto = packet.find(".//proto[@name = 'j2735']")
-            if j2735_proto is not None and packet_type is not None:
-                make_msg_instance(j2735_proto, packet_type)
-
-
-#Cohda
-def analyze_cohda(dir, type):
-    tree = ET.parse(dir)
-    root = tree.getroot()
-
     global t_list
     global r_list
 
-    if type == "rec":
-        packet_type = "rec"
-        #Obtain unique ID of msgCnt concatenated w/ secMark for Rx
-        #Append it to the r_list for further analysis
-        for r_packet in root:
-            for r_proto in r_packet:
-                if re.search(r"[Jj]2735(_2016)?", r_proto.attrib.get("name")): #BSM only appears in SAE J2735 protocol
-                    make_msg_instance(r_proto, packet_type)
+    device_ip = find_device_ip(root)
+    if type == "trans":
+        addr_field = "ipv6.src"
+    else:
+        addr_field = "ipv6.dst"
 
-    elif type == "trans":
-        packet_type = "trans"
-        #Same thing as above but for Tx
-        for t_packet in root:
-            for t_proto in t_packet:
-                if re.search(r"[Jj]2735(_2016)?", t_proto.attrib.get("name")):
-                    make_msg_instance(t_proto, packet_type)
+    for packet in root:
+        if device_ip is not None:
+            addr = get_field_values(packet, {addr_field}).get(addr_field)
+            if addr is None or addr.lower() != device_ip.lower():
+                continue
+
+        j2735_proto = find_j2735_proto(packet)
+        if j2735_proto is not None:
+            make_msg_instance(j2735_proto, type)
 
 
-#--------------------------------------
+# Obtains the needed message attributes
 def build_bsm_id(input_str, msg_cnt, sec_mark, width, length, field, field_name):
-    if re.search(r"[Jj]2735(_2016)?\.msgCnt", field_name):
+    if re.search(r"j2735(_2016)?\.msgCnt", field_name):
         msg_cnt = field.attrib.get("show")
         input_str += msg_cnt
-    if re.search(r"[Jj]2735(_2016)?\.secMark", field_name):
+    if re.search(r"j2735(_2016)?\.secMark", field_name):
         sec_mark = field.attrib.get("show")
         input_str += sec_mark
-    if re.search(r"[Jj]2735(_2016)?\.width", field_name):
+    if re.search(r"j2735(_2016)?\.width", field_name):
         width = field.attrib.get("show")
         input_str += width
-    if re.search(r"[Jj]2735(_2016)?\.length", field_name):
+    if re.search(r"j2735(_2016)?\.length", field_name):
         length = field.attrib.get("show")
         input_str += length
 
@@ -154,13 +86,13 @@ def build_bsm_id(input_str, msg_cnt, sec_mark, width, length, field, field_name)
 
 
 def build_tim_id(input_str, msg_cnt, lat, long, field, field_name):
-    if re.search(r"[Jj]2735(_2016)?\.msgCnt", field_name):
+    if re.search(r"j2735(_2016)?\.msgCnt", field_name):
         msg_cnt = field.attrib.get("show")
         input_str += msg_cnt
-    if re.search(r"[Jj]2735(_2016)?\.lat", field_name):
+    if re.search(r"j2735(_2016)?\.lat", field_name):
         lat = field.attrib.get("show")
         input_str += lat
-    if re.search(r"[Jj]2735(_2016)?\.long", field_name):
+    if re.search(r"j2735(_2016)?\.long", field_name):
         long = field.attrib.get("show")
         input_str += long
 
@@ -168,16 +100,16 @@ def build_tim_id(input_str, msg_cnt, lat, long, field, field_name):
 
 
 def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
-    if re.search(r"[Jj]2735(_2016)?\.msgIssueRevision", field_name):
+    if re.search(r"j2735(_2016)?\.msgIssueRevision", field_name):
         msg_issue_rev = field.attrib.get("show")
         input_str += msg_issue_rev
-    if re.search(r"[Jj]2735(_2016)?\.intersections", field_name):
+    if re.search(r"j2735(_2016)?\.intersections", field_name):
         inter = field.attrib.get("show")
         input_str += inter
-    if re.search(r"[Jj]2735(_2016)?\.lat(_03)?", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03, so I used Regex to cover both cases.
+    if re.search(r"j2735(_2016)?\.lat(_03)?", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03, so I used Regex to cover both cases.
         lat = field.attrib.get("show")
         input_str += lat
-    if re.search(r"[Jj]2735(_2016)?\.long(_01)?", field_name): #Note: Old Wireshark exports .long but new one exports .long_01, so I used Regex to cover both cases.
+    if re.search(r"j2735(_2016)?\.long(_01)?", field_name): #Note: Old Wireshark exports .long but new one exports .long_01, so I used Regex to cover both cases.
         long = field.attrib.get("show")
         input_str += long
 
@@ -185,13 +117,13 @@ def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
 
 
 def build_spat_id(input_str, id, rev, seq_len, field, field_name):
-    if re.search(r"[Jj]2735(_2016)?\.id(_01)?", field_name): #Note: Old Wireshark exports .id but new one exports .id_01, so I used Regex to cover both cases.
+    if re.search(r"j2735(_2016)?\.id(_01)?", field_name): #Note: Old Wireshark exports .id but new one exports .id_01, so I used Regex to cover both cases.
         id = field.attrib.get("show")
         input_str += id
-    if re.search(r"[Jj]2735(_2016)?\.revision", field_name):
+    if re.search(r"j2735(_2016)?\.revision", field_name):
         rev = field.attrib.get("show")
         input_str += rev
-    if re.search(r"[Jj]2735(_2016)?\.sequence_of_length", field_name):
+    if re.search(r"j2735(_2016)?\.sequence_of_length", field_name):
         seq_len = field.attrib.get("show")
         input_str += seq_len
 
@@ -273,6 +205,7 @@ def make_msg_instance(proto, pack_type):
             elif len(combo_id) != 0 and pack_type == "trans":
                 t_list.append(SPAT(combo_id, id, revision, sequence_of_length))
 
+# Used for Folium map timestamp
 def first_bsm_time(dir):
     tree = ET.parse(dir)
     root = tree.getroot()
@@ -282,9 +215,12 @@ def first_bsm_time(dir):
             if field.attrib.get("name") == "frame.time_utc":
                 return re.sub(r"\..*", "", field.attrib.get("show"))
 
+
+# Writes results in CSV format
 def final_output(dir):
     with open("coords.csv", "w") as file:
-        file.write(first_bsm_time(dir)+"\n")
+        if first_bsm_time(dir) is not None:
+            file.write(first_bsm_time(dir)+"\n") #Initiates the timeline of Folium Map
         # Use Counter, a subclass of dicts
         t_counts = Counter(t_list)  # Key: message object, Value: occurrences
         r_counts = Counter(r_list)
@@ -318,79 +254,30 @@ def final_output(dir):
                     print(f"#{indx + 1}, {trans_msg.msgType}, {trans_msg.id}, {trans_msg.revision}, , , , {r_counts.get(trans_msg)}, Failed to Receive")
 
 
-#Check if input PDML files for Kapsch are valid
-def check_kapsch_file(dir):
-    path = Path(dir)
-    return check_is_pdml(path) #needs to be .pdml file
-
-
-#Check if input PDML files for Commsignia are valid
-def check_commsignia_file(dir):
-    path = Path(dir)
-    return check_is_pdml(path) #needs to be .pdml file
-
-#Check if input PDML files for Cohda are valid
-def check_cohda_files(t_dir, r_dir):
-    t_path = Path(t_dir)
-    r_path = Path(r_dir)
-    t_name = t_path.name
-    r_name = r_path.name
-    check_is_pdml(t_path, r_path)
-    if re.search(r"ts\d", t_name).group()[2] != re.search(r"ts\d", r_name).group()[2]: #check if test nums match
-        return False
-    if re.search(r"tx", t_name) is None: #Tx (1st arg in main func) should mean transmitted
-        return False
-    if re.search(r"rx", r_name) is None: #Rx (2nd arg in main func) should mean received
-        return False
-    if re.search(r"(obu|rsu)\d?-\d", t_name).group()[-1] != re.search(r"(obu|rsu)\d?-\d", t_name).group()[-1]: #check if same dataset num
-        return False
-    return True
-    
-
 def check_is_pdml(dir):
-    if dir.suffix != ".pdml":
+    path = Path(dir)
+    if path.suffix != ".pdml":
         return False
+    else:
+        return True
 
 #--------------------------------------
 
 def main():
     try:
-        t_inpt_type = sys.argv[1].lower()
-        t_pdml_dir = sys.argv[2]
-        r_inpt_type = sys.argv[3].lower()
-        r_pdml_dir = sys.argv[4]
+        t_pdml_dir = sys.argv[1]
+        r_pdml_dir = sys.argv[2]
     except IndexError:
         print("Error: Please follow the described input format.")
         sys.exit(1)
     start_time = time.time()
 
-    if t_inpt_type == "cohda" or t_inpt_type == "qualcomm" or t_inpt_type == "ettifos": #Qualcomm & Ettifos use Cohda format
-        analyze_cohda(t_pdml_dir, "trans")
+    if check_is_pdml(t_pdml_dir) == False or check_is_pdml(r_pdml_dir) == False:
+        print("Please provide PDML files")
+        sys.exit(1)
 
-    elif t_inpt_type == "commsignia":
-        if check_commsignia_file(t_pdml_dir) == False:
-            sys.exit(f"Please provide a valid {t_inpt_type.capitalize()} PDML file")
-        analyze_commsignia(t_pdml_dir, "trans")
-
-    elif t_inpt_type == "kapsch":
-        if check_kapsch_file(t_pdml_dir) == False:
-            sys.exit(f"Please provide a valid {t_inpt_type.capitalize()} PDML file...")
-        analyze_kap(t_pdml_dir, "trans")
-
-
-    if r_inpt_type == "cohda" or r_inpt_type == "qualcomm" or r_inpt_type == "ettifos": #Qualcomm & Ettifos use Cohda format
-        analyze_cohda(r_pdml_dir, "rec")
-
-    elif r_inpt_type == "commsignia":
-        if check_commsignia_file(r_pdml_dir) == False:
-            sys.exit(f"Please provide a valid {r_inpt_type.capitalize()} PDML file")
-        analyze_commsignia(r_pdml_dir, "rec")
-
-    elif r_inpt_type == "kapsch":
-        if check_kapsch_file(r_pdml_dir) == False:
-            sys.exit(f"Please provide a valid {r_inpt_type.capitalize()} PDML file...")
-        analyze_kap(r_pdml_dir, "rec")
-
+    analyze_pdml(t_pdml_dir, "trans")
+    analyze_pdml(r_pdml_dir, "rec")
 
     final_output(t_pdml_dir)
 
