@@ -8,6 +8,7 @@ from V2XMessage import TIM
 from V2XMessage import MAP
 from V2XMessage import SPAT
 from collections import Counter
+from datetime import datetime, UTC
 
 
 t_list = []
@@ -27,11 +28,14 @@ def get_field_values(element, field_names):
 # Determines this device's ipv6 address by finding its 1st broadcasted packet
 def find_device_ip(root):
     for packet in root:
-        fields = get_field_values(packet, {"ipv6.src", "ipv6.dst"})
+        fields = get_field_values(packet, {"wlan.sa", "ipv6.src", "ipv6.dst"})
         dst = fields.get("ipv6.dst")
         if dst is not None and ("ff01" in dst or "ff02" in dst): #broadcast dst means this packet's source is the device itself
-            return fields.get("ipv6.src")
-    return None
+            if fields.get("wlan.sa") is not None:
+                return fields.get("wlan.sa"), "wlan"
+            elif fields.get("ipv6.src") is not None:
+                return fields.get("ipv6.src"), "ipv6"
+    return None, ""
 
 
 # Finds the SAE J2735 proto layer in a packet, regardless of the dissector version
@@ -50,9 +54,12 @@ def analyze_pdml(dir, type):
     global t_list
     global r_list
 
-    device_ip = find_device_ip(root)
+    device_ip, proto_type = find_device_ip(root)
     if type == "trans":
-        addr_field = "ipv6.src"
+        if proto_type == "wlan":
+            addr_field = "wlan.sa"
+        elif proto_type == "ipv6":
+            addr_field = "ipv6.src"
     else:
         addr_field = "ipv6.dst"
 
@@ -214,6 +221,9 @@ def first_bsm_time(dir):
         for field in frame_proto.iter():
             if field.attrib.get("name") == "frame.time_utc":
                 return re.sub(r"\..*", "", field.attrib.get("show"))
+            else:
+                return str(datetime.now(UTC))
+                
 
 
 # Writes results in CSV format
