@@ -25,16 +25,18 @@ def get_field_values(element, field_names):
     return result
 
 
-# Determines this device's ipv6 address by finding its 1st broadcasted packet
+# Determines this device's address by finding its 1st broadcasted packet
 def find_device_ip(root):
     for packet in root:
-        fields = get_field_values(packet, {"wlan.sa", "ipv6.src", "ipv6.dst"})
+        fields = get_field_values(packet, {"wlan.sa", "wlan.da", "ipv6.src", "ipv6.dst"})
+
         dst = fields.get("ipv6.dst")
         if dst is not None and ("ff01" in dst or "ff02" in dst): #broadcast dst means this packet's source is the device itself
-            if fields.get("wlan.sa") is not None:
-                return fields.get("wlan.sa"), "wlan"
-            elif fields.get("ipv6.src") is not None:
-                return fields.get("ipv6.src"), "ipv6"
+            return fields.get("ipv6.src"), "ipv6"
+
+        wlan_dst = fields.get("wlan.da")
+        if wlan_dst is not None and wlan_dst.lower() == "ff:ff:ff:ff:ff:ff": #wlan broadcast address
+            return fields.get("wlan.sa"), "wlan"
     return None, ""
 
 
@@ -55,13 +57,18 @@ def analyze_pdml(dir, type):
     global r_list
 
     device_ip, proto_type = find_device_ip(root)
-    if type == "trans":
-        if proto_type == "wlan":
+    #Handles 'wlan' proto
+    if proto_type == "wlan":
+        if type == "trans":
             addr_field = "wlan.sa"
-        elif proto_type == "ipv6":
-            addr_field = "ipv6.src"
+        else:
+            addr_field = "wlan.da"
+    #Handles 'ipv6' proto
     else:
-        addr_field = "ipv6.dst"
+        if type == "trans":
+            addr_field = "ipv6.src"
+        else:
+            addr_field = "ipv6.dst"
 
     for packet in root:
         if device_ip is not None:
@@ -137,7 +144,7 @@ def build_spat_id(input_str, id, rev, seq_len, field, field_name):
     return input_str, id, rev, seq_len
 
 
-#Iterates through the fields in a proto, makes an object based off the message type, and appends it to either t_list or r_list
+# Iterates through the fields in a proto, makes an object based off the message type, and appends it to either t_list or r_list
 def make_msg_instance(proto, pack_type):
     combo_id = ""
     field_msg_id = None
