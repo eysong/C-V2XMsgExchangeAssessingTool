@@ -57,23 +57,16 @@ def analyze_pdml(dir, type):
     global r_list
 
     device_ip, proto_type = find_device_ip(root)
-    #Handles 'wlan' proto
-    if proto_type == "wlan":
-        if type == "trans":
-            addr_field = "wlan.sa"
-        else:
-            addr_field = "wlan.da"
-    #Handles 'ipv6' proto
-    else:
-        if type == "trans":
-            addr_field = "ipv6.src"
-        else:
-            addr_field = "ipv6.dst"
+    # Packets not sent by this device is something the device received
+    addr_field = "wlan.sa" if proto_type == "wlan" else "ipv6.src"
 
     for packet in root:
         if device_ip is not None:
             addr = get_field_values(packet, {addr_field}).get(addr_field)
-            if addr is None or addr.lower() != device_ip.lower():
+            is_from_device = addr is not None and addr.lower() == device_ip.lower()
+            if type == "trans" and not is_from_device:
+                continue
+            if type == "rec" and is_from_device:
                 continue
 
         j2735_proto = find_j2735_proto(packet)
