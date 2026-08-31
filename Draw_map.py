@@ -110,8 +110,7 @@ folium.Marker(
 ).add_to(m)
 
 
-
-
+m.save("colored_car_path.html")
 
 #Automatically opens up the HTML file in a browser
 #Used in combination with the GUI button
