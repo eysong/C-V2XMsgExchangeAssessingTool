@@ -133,9 +133,9 @@ class MainPage(tk.Frame):
         super().__init__(parent, bg="#e3e9f8")
         self.controller = controller
 
-        self.file1_placeholder = "Please select a Transmitted PDML file"
+        self.file1_placeholder = "Select a PDML file from the designated sender"
         self.file1_path = tk.StringVar(value=self.file1_placeholder)
-        self.file2_placeholder = "Please select a Received PDML file"
+        self.file2_placeholder = "Select a PDML file from the designated receiver"
         self.file2_path = tk.StringVar(value=self.file2_placeholder)
 
         self.columnconfigure(0, weight=0)
@@ -163,7 +163,7 @@ class MainPage(tk.Frame):
         # File 1 row
         tk.Label(self, text="Transmitted PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=2, column=0, columnspan=3, padx=8, pady=(2, 2))
         self.entry1 = tk.Label(self, textvariable=self.file1_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
-        self.entry1.grid(row=3, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
+        self.entry1.grid(row=3, column=0, columnspan=3, padx=4, pady=(2, 8), sticky="ew")
         self.file1_path.trace_add("write", self.update_file1_font)
 
         self.dropzone1 = create_drop_zone(self, self.file1_path, self.browse_file1)
@@ -175,7 +175,7 @@ class MainPage(tk.Frame):
         # File 2 row
         tk.Label(self, text="Received PDML", font=("Calibri", 14), bg="#e3e9f8").grid(row=6, column=0, columnspan=3, padx=8, pady=(2, 2))
         self.entry2 = tk.Label(self, textvariable=self.file2_path, font=("Calibri", 12, "italic"), bg="#e3e9f8", fg="#1A365D", anchor="center", justify="center")
-        self.entry2.grid(row=7, column=1, columnspan=1, padx=4, pady=(2, 8), sticky="ew")
+        self.entry2.grid(row=7, column=0, columnspan=3, padx=4, pady=(2, 8), sticky="ew")
         self.file2_path.trace_add("write", self.update_file2_font)
 
         self.dropzone2 = create_drop_zone(self, self.file2_path, self.browse_file2)

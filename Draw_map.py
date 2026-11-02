@@ -81,7 +81,10 @@ for i, (coords, status) in enumerate(coordinates):
 geojson_data = {"type": "FeatureCollection", "features": features}
 
 # Initialize map centered at the 1st coordinate
-m = folium.Map(location=coordinates[0][0], zoom_start=16)
+m = folium.Map(location=coordinates[0][0], zoom_start=16,
+                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+                attr="Tiles © Esri")
+#Note: Tiles used are from Esri World Street Map
 
 # Configs for rendering animation steps
 TimestampedGeoJson(

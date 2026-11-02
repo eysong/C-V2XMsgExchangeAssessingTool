@@ -13,6 +13,7 @@ from datetime import datetime, UTC
 
 t_list = []
 r_list = []
+tx_mac = set() #to be used to store MAC addresses of sender device
 
 
 # Returns a dict for whichever of input field names are present in the element
@@ -25,53 +26,69 @@ def get_field_values(element, field_names):
     return result
 
 
-# Determines this device's address by finding its 1st broadcasted packet
-def find_device_ip(root):
+# Determine if this PDML contains wlan proto to later identify Tx or Rx msg.
+def contains_wlan(root):
     for packet in root:
-        fields = get_field_values(packet, {"wlan.sa", "wlan.da", "ipv6.src", "ipv6.dst"})
-
-        dst = fields.get("ipv6.dst")
-        if dst is not None and ("ff01" in dst or "ff02" in dst): #broadcast dst means this packet's source is the device itself
-            return fields.get("ipv6.src"), "ipv6"
-
-        wlan_dst = fields.get("wlan.da")
-        if wlan_dst is not None and wlan_dst.lower() == "ff:ff:ff:ff:ff:ff": #wlan broadcast address
-            return fields.get("wlan.sa"), "wlan"
-    return None, ""
+        for proto in packet:
+            name = proto.attrib.get("name")
+            if name is not None and name == "wlan":
+                return True
+        return False
 
 
 # Finds the SAE J2735 proto layer in a packet, regardless of the dissector version
 def find_j2735_proto(packet):
-    for proto in packet.iter("proto"):
+    for proto in packet:
         name = proto.attrib.get("name")
         if name is not None and re.match(r"j2735(_2016)?$", name):
             return proto
     return None
-
+    
 
 # Unified analyzer method for all vendors
-def analyze_pdml(dir, type):
+def analyze_pdml(dir, device_type):
     tree = ET.parse(dir)
     root = tree.getroot()
     global t_list
     global r_list
+    global tx_mac
 
-    device_ip, proto_type = find_device_ip(root)
-    # Packets not sent by this device is something the device received
-    addr_field = "wlan.sa" if proto_type == "wlan" else "ipv6.src"
 
-    for packet in root:
-        if device_ip is not None:
-            addr = get_field_values(packet, {addr_field}).get(addr_field)
-            is_from_device = addr is not None and addr.lower() == device_ip.lower()
-            if type == "trans" and not is_from_device:
-                continue
-            if type == "rec" and is_from_device:
-                continue
+    packet_type = "trans"
+    has_wlan = contains_wlan(root)
+    
+    if device_type == "trans":
+        for packet in root:
+            for proto in packet:
+                if has_wlan == True:
+                    if proto.find(".//field[@name = 'wlan.ta']") is not None:
+                        tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
+                        tx_mac.add(tx_addr) #adds new unique Tx mac addr to the set
+                        packet_type = "trans"
+                        j2735_proto = find_j2735_proto(packet)
+                        if j2735_proto is not None:
+                            make_msg_instance(j2735_proto, packet_type)
+                else:
+                    j2735_proto = find_j2735_proto(packet)
+                    if j2735_proto is not None:
+                        make_msg_instance(j2735_proto, "trans")
+    elif device_type == "rec":
+        for packet in root:
+            for proto in packet:
+                if has_wlan == True:
+                    if proto.find(".//field[@name = 'wlan.ta']") is not None:
+                        tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
+                        if tx_addr in tx_mac: #checks to see if the sender of this msg is one of tx_mac
+                            packet_type = "rec"
+                            j2735_proto = find_j2735_proto(packet)
+                            if j2735_proto is not None:
+                                make_msg_instance(j2735_proto, packet_type)
+                else:
+                    j2735_proto = find_j2735_proto(packet)
+                    if j2735_proto is not None:
+                        make_msg_instance(j2735_proto, "rec")
 
-        j2735_proto = find_j2735_proto(packet)
-        if j2735_proto is not None:
-            make_msg_instance(j2735_proto, type)
+    
 
 
 # Obtains the needed message attributes
@@ -218,11 +235,8 @@ def first_bsm_time(dir):
     root = tree.getroot()
     for packet in root:
         frame_proto = packet.find(".//proto[@name = 'frame']")
-        for field in frame_proto.iter():
-            if field.attrib.get("name") == "frame.time_utc":
-                return re.sub(r"\..*", "", field.attrib.get("show"))
-            else:
-                return str(datetime.now(UTC))
+        utc_field = frame_proto.find(".//field[@name = 'frame.time_utc']")
+        return re.sub(r"\..*", "", utc_field.attrib.get("show"))
                 
 
 
@@ -277,6 +291,7 @@ def main():
     try:
         t_pdml_dir = sys.argv[1]
         r_pdml_dir = sys.argv[2]
+        # tx_mac = sys.argv[3]
     except IndexError:
         print("Error: Please follow the described input format.")
         sys.exit(1)
@@ -286,6 +301,7 @@ def main():
         print("Please provide PDML files")
         sys.exit(1)
 
+    # tx_mac = ("00:00:00:52:da:97", "00:00:00:91:16:64", "00:00:00:75:9d:6e")
     analyze_pdml(t_pdml_dir, "trans")
     analyze_pdml(r_pdml_dir, "rec")
 
