@@ -46,7 +46,7 @@ def find_j2735_proto(packet):
     
 
 # Unified analyzer method for all vendors
-def analyze_pdml(dir, device_type):
+def analyze_pdml(dir, device_type, isOBU):
     tree = ET.parse(dir)
     root = tree.getroot()
     global t_list
@@ -56,11 +56,19 @@ def analyze_pdml(dir, device_type):
 
     packet_type = "trans"
     has_wlan = contains_wlan(root)
+
     
     if device_type == "trans":
         for packet in root:
-            for proto in packet:
-                if has_wlan == True:
+            if has_wlan == True:
+                message_id = packet.find(".//field[@name = 'j2735.messageId']")
+                if isOBU == True:
+                    if message_id is not None and message_id.get("show") != "20":
+                        continue #skip this packet if not BSM for OBU sending msg (b/c it would be a rec msg instead of trans one)
+                else:
+                    if message_id is not None and message_id.get("show") == "20":
+                        continue #skip this packet if BSM for RSU sending msg (b/c it would be a rec msg instead of trans)
+                for proto in packet:
                     if proto.find(".//field[@name = 'wlan.ta']") is not None:
                         tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
                         tx_mac.add(tx_addr) #adds new unique Tx mac addr to the set
@@ -68,17 +76,17 @@ def analyze_pdml(dir, device_type):
                         j2735_proto = find_j2735_proto(packet)
                         if j2735_proto is not None:
                             make_msg_instance(j2735_proto, packet_type)
-                else:
-                    j2735_proto = find_j2735_proto(packet)
-                    if j2735_proto is not None:
-                        make_msg_instance(j2735_proto, "trans")
+            else:
+                j2735_proto = find_j2735_proto(packet)
+                if j2735_proto is not None:
+                    make_msg_instance(j2735_proto, "trans")
     elif device_type == "rec":
         for packet in root:
             for proto in packet:
                 if has_wlan == True:
                     if proto.find(".//field[@name = 'wlan.ta']") is not None:
                         tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
-                        if tx_addr in tx_mac: #checks to see if the sender of this msg is one of tx_mac
+                        if tx_addr in tx_mac: #checks to see if the original sender of this msg is one of tx_mac
                             packet_type = "rec"
                             j2735_proto = find_j2735_proto(packet)
                             if j2735_proto is not None:
@@ -87,8 +95,6 @@ def analyze_pdml(dir, device_type):
                     j2735_proto = find_j2735_proto(packet)
                     if j2735_proto is not None:
                         make_msg_instance(j2735_proto, "rec")
-
-    
 
 
 # Obtains the needed message attributes
@@ -291,7 +297,8 @@ def main():
     try:
         t_pdml_dir = sys.argv[1]
         r_pdml_dir = sys.argv[2]
-        # tx_mac = sys.argv[3]
+        sender_is_obu = sys.argv[3].lower() == "true" #value obtained from analyzing transmitted filename in GUI
+        receiver_is_obu = sys.argv[4].lower() == "true" #value obtained from analyzing received filename in GUI
     except IndexError:
         print("Error: Please follow the described input format.")
         sys.exit(1)
@@ -301,9 +308,8 @@ def main():
         print("Please provide PDML files")
         sys.exit(1)
 
-    # tx_mac = ("00:00:00:52:da:97", "00:00:00:91:16:64", "00:00:00:75:9d:6e")
-    analyze_pdml(t_pdml_dir, "trans")
-    analyze_pdml(r_pdml_dir, "rec")
+    analyze_pdml(t_pdml_dir, "trans", sender_is_obu)
+    analyze_pdml(r_pdml_dir, "rec", receiver_is_obu)
 
     final_output(t_pdml_dir)
 
