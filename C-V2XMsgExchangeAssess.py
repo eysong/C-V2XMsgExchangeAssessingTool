@@ -27,13 +27,16 @@ def get_field_values(element, field_names):
 
 
 # Determine if this PDML contains wlan proto to later identify Tx or Rx msg.
+#Checks first 10 packets
 def contains_wlan(root):
+    packet_num = 0
     for packet in root:
+        packet_num += 1
         for proto in packet:
             name = proto.attrib.get("name")
             if name is not None and name == "wlan":
                 return True
-        return False
+    return False
 
 
 # Finds the SAE J2735 proto layer in a packet, regardless of the dissector version
@@ -46,7 +49,7 @@ def find_j2735_proto(packet):
     
 
 # Unified analyzer method for all vendors
-def analyze_pdml(dir, device_type, isOBU):
+def analyze_pdml(dir, device_type):
     tree = ET.parse(dir)
     root = tree.getroot()
     global t_list
@@ -54,60 +57,52 @@ def analyze_pdml(dir, device_type, isOBU):
     global tx_mac
 
 
-    packet_type = "trans"
     has_wlan = contains_wlan(root)
-
     
     if device_type == "trans":
         for packet in root:
             if has_wlan == True:
-                message_id = packet.find(".//field[@name = 'j2735.messageId']")
-                if isOBU == True:
-                    if message_id is not None and message_id.get("show") != "20":
-                        continue #skip this packet if not BSM for OBU sending msg (b/c it would be a rec msg instead of trans one)
-                else:
-                    if message_id is not None and message_id.get("show") == "20":
-                        continue #skip this packet if BSM for RSU sending msg (b/c it would be a rec msg instead of trans)
                 for proto in packet:
-                    if proto.find(".//field[@name = 'wlan.ta']") is not None:
-                        tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
-                        tx_mac.add(tx_addr) #adds new unique Tx mac addr to the set
-                        packet_type = "trans"
-                        j2735_proto = find_j2735_proto(packet)
-                        if j2735_proto is not None:
-                            make_msg_instance(j2735_proto, packet_type)
+                    udp_payload = proto.find(".//field[@name = 'udp.payload']")
+                    if udp_payload is not None:
+                        if udp_payload.get("show")[1] == "8":
+                            j2735_proto = find_j2735_proto(packet)
+                            if j2735_proto is not None:
+                                make_msg_instance(j2735_proto, "trans")
             else:
                 j2735_proto = find_j2735_proto(packet)
                 if j2735_proto is not None:
                     make_msg_instance(j2735_proto, "trans")
     elif device_type == "rec":
         for packet in root:
-            for proto in packet:
-                if has_wlan == True:
-                    if proto.find(".//field[@name = 'wlan.ta']") is not None:
-                        tx_addr = proto.find(".//field[@name = 'wlan.ta']").get("show")
-                        if tx_addr in tx_mac: #checks to see if the original sender of this msg is one of tx_mac
-                            packet_type = "rec"
+            if has_wlan == True:
+                for proto in packet:
+                    udp_payload = proto.find(".//field[@name = 'udp.payload']")
+                    if udp_payload is not None:
+                        if udp_payload.get("show")[1] == "7":
                             j2735_proto = find_j2735_proto(packet)
                             if j2735_proto is not None:
-                                make_msg_instance(j2735_proto, packet_type)
-                else:
-                    j2735_proto = find_j2735_proto(packet)
-                    if j2735_proto is not None:
-                        make_msg_instance(j2735_proto, "rec")
+                                make_msg_instance(j2735_proto, "rec")
+                        break
+            else:
+                j2735_proto = find_j2735_proto(packet)
+                if j2735_proto is not None:
+                    make_msg_instance(j2735_proto, "rec")
+
+    
 
 
 # Obtains the needed message attributes
 def build_bsm_id(input_str, msg_cnt, sec_mark, width, length, field, field_name):
     if re.search(r"j2735(_2016)?\.msgCnt", field_name):
         msg_cnt = field.attrib.get("show")
-        input_str += msg_cnt
+        input_str += msg_cnt + ","
     if re.search(r"j2735(_2016)?\.secMark", field_name):
         sec_mark = field.attrib.get("show")
-        input_str += sec_mark
+        input_str += sec_mark + ","
     if re.search(r"j2735(_2016)?\.width", field_name):
         width = field.attrib.get("show")
-        input_str += width
+        input_str += width + ","
     if re.search(r"j2735(_2016)?\.length", field_name):
         length = field.attrib.get("show")
         input_str += length
@@ -118,10 +113,10 @@ def build_bsm_id(input_str, msg_cnt, sec_mark, width, length, field, field_name)
 def build_tim_id(input_str, msg_cnt, lat, long, field, field_name):
     if re.search(r"j2735(_2016)?\.msgCnt", field_name):
         msg_cnt = field.attrib.get("show")
-        input_str += msg_cnt
+        input_str += msg_cnt + ","
     if re.search(r"j2735(_2016)?\.lat", field_name):
         lat = field.attrib.get("show")
-        input_str += lat
+        input_str += lat + ","
     if re.search(r"j2735(_2016)?\.long", field_name):
         long = field.attrib.get("show")
         input_str += long
@@ -132,13 +127,13 @@ def build_tim_id(input_str, msg_cnt, lat, long, field, field_name):
 def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
     if re.search(r"j2735(_2016)?\.msgIssueRevision", field_name):
         msg_issue_rev = field.attrib.get("show")
-        input_str += msg_issue_rev
+        input_str += msg_issue_rev + ","
     if re.search(r"j2735(_2016)?\.intersections", field_name):
         inter = field.attrib.get("show")
-        input_str += inter
+        input_str += inter + ","
     if re.search(r"j2735(_2016)?\.lat(_03)?", field_name): #Note: Old Wireshark exports .lat but new one exports .lat_03, so I used Regex to cover both cases.
         lat = field.attrib.get("show")
-        input_str += lat
+        input_str += lat + ","
     if re.search(r"j2735(_2016)?\.long(_01)?", field_name): #Note: Old Wireshark exports .long but new one exports .long_01, so I used Regex to cover both cases.
         long = field.attrib.get("show")
         input_str += long
@@ -149,10 +144,10 @@ def build_map_id(input_str, msg_issue_rev, inter, lat, long, field, field_name):
 def build_spat_id(input_str, id, rev, seq_len, field, field_name):
     if re.search(r"j2735(_2016)?\.id(_01)?", field_name): #Note: Old Wireshark exports .id but new one exports .id_01, so I used Regex to cover both cases.
         id = field.attrib.get("show")
-        input_str += id
+        input_str += id + ","
     if re.search(r"j2735(_2016)?\.revision", field_name):
         rev = field.attrib.get("show")
-        input_str += rev
+        input_str += rev + ","
     if re.search(r"j2735(_2016)?\.sequence_of_length", field_name):
         seq_len = field.attrib.get("show")
         input_str += seq_len
@@ -297,8 +292,7 @@ def main():
     try:
         t_pdml_dir = sys.argv[1]
         r_pdml_dir = sys.argv[2]
-        sender_is_obu = sys.argv[3].lower() == "true" #value obtained from analyzing transmitted filename in GUI
-        receiver_is_obu = sys.argv[4].lower() == "true" #value obtained from analyzing received filename in GUI
+        # tx_mac = sys.argv[3]
     except IndexError:
         print("Error: Please follow the described input format.")
         sys.exit(1)
@@ -308,8 +302,9 @@ def main():
         print("Please provide PDML files")
         sys.exit(1)
 
-    analyze_pdml(t_pdml_dir, "trans", sender_is_obu)
-    analyze_pdml(r_pdml_dir, "rec", receiver_is_obu)
+    # tx_mac = ("00:00:00:52:da:97", "00:00:00:91:16:64", "00:00:00:75:9d:6e")
+    analyze_pdml(t_pdml_dir, "trans")
+    analyze_pdml(r_pdml_dir, "rec")
 
     final_output(t_pdml_dir)
 

@@ -316,7 +316,7 @@ class MainPage(tk.Frame):
 
         try:
             result = subprocess.run(
-                [sys.executable, MAIN_SCRIPT, f1, f2, str(sender_is_obu), str(receiver_is_obu)],
+                [sys.executable, MAIN_SCRIPT, f1, f2],
                 capture_output=True, text=True, check=False
             )
         except Exception as e:
