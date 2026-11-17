@@ -236,45 +236,6 @@ class MainPage(tk.Frame):
         style = "italic" if is_placeholder else "roman"
         self.entry2.config(font=("Calibri", 12, style))
 
-    # A new page that prompts the user to input OBU/RSU unit type if N/A in filename
-    def ask_device_type(self, filename):
-        dialog = tk.Toplevel(self.controller.root)
-        dialog.title("Identify Device Type")
-        dialog.geometry("320x180")
-        dialog.transient(self.controller.root)
-        dialog.grab_set()
-
-        tk.Label(
-            dialog,
-            text=f"Could not identify device type from:\n{os.path.basename(filename)}\n\n"
-                 "Please select the device type:"
-        ).pack(pady=10)
-
-        device_type = tk.StringVar(value="OBU")
-
-        tk.Radiobutton(
-            dialog, text="OBU", variable=device_type, value="OBU"
-        ).pack()
-
-        tk.Radiobutton(
-            dialog, text="RSU", variable=device_type, value="RSU"
-        ).pack()
-
-        result = {"value": None}
-
-        def confirm():
-            result["value"] = device_type.get()
-            dialog.destroy()
-
-        def cancel():
-            dialog.destroy()
-
-        tk.Button(dialog, text="Confirm", command=confirm).pack(pady=10)
-        dialog.protocol("WM_DELETE_WINDOW", cancel)
-        dialog.wait_window()
-
-        return result["value"]
-
 
     def run_compare(self):
         f1 = self.file1_path.get().strip()
@@ -282,26 +243,6 @@ class MainPage(tk.Frame):
 
         f1_basename = os.path.basename(os.path.normpath(f1))
         f2_basename = os.path.basename(os.path.normpath(f2))
-
-        if re.search(r"obu?", f1_basename) is not None:
-            sender_is_obu = True
-        elif re.search(r"rsu?", f1_basename) is not None:
-            sender_is_obu = False
-        else:
-            device = self.ask_device_type(f1)
-            if device is None:
-                return
-            sender_is_obu = (device == "OBU")
-
-        if re.search(r"obu?", f2_basename) is not None:
-            receiver_is_obu = True
-        elif re.search(r"rsu?", f2_basename) is not None:
-            receiver_is_obu = False
-        else:
-            device = self.ask_device_type(f2)
-            if device is None:
-                return
-            receiver_is_obu = (device == "OBU")
 
         if not os.path.isfile(f1) or not os.path.isfile(f2):
             messagebox.showwarning("Missing files", "Please select both PDML files first.")

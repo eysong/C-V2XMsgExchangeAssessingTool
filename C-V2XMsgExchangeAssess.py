@@ -13,8 +13,6 @@ from datetime import datetime, UTC
 
 t_list = []
 r_list = []
-tx_mac = set() #to be used to store MAC addresses of sender device
-
 
 # Returns a dict for whichever of input field names are present in the element
 def get_field_values(element, field_names):
@@ -292,7 +290,6 @@ def main():
     try:
         t_pdml_dir = sys.argv[1]
         r_pdml_dir = sys.argv[2]
-        # tx_mac = sys.argv[3]
     except IndexError:
         print("Error: Please follow the described input format.")
         sys.exit(1)
@@ -302,7 +299,6 @@ def main():
         print("Please provide PDML files")
         sys.exit(1)
 
-    # tx_mac = ("00:00:00:52:da:97", "00:00:00:91:16:64", "00:00:00:75:9d:6e")
     analyze_pdml(t_pdml_dir, "trans")
     analyze_pdml(r_pdml_dir, "rec")
 
