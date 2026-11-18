@@ -265,7 +265,7 @@ class MainPage(tk.Frame):
             return
         self.output_box.delete("1.0", tk.END)
         self.output_box.insert(tk.END, "Running comparison, please wait...\n")
-        self.compare_btn.config(state="disabled", text="Running...")
+        self.compare_btn.config(state="disabled", text="Analyzing...", disabledforeground = "#0FB3A6")
 
         # Run the script in a background thread so the Tk event loop keeps running
         self._compare_result = None
@@ -340,7 +340,7 @@ class MainPage(tk.Frame):
 
     # Runs once the script has finished: shows the results or the error
     def _finish_compare(self):
-        self.compare_btn.config(state="normal", text="Compare")
+        self.compare_btn.config(state="normal", text="Compare", fg = "#FFFFFF")
         result = self._compare_result
 
         if isinstance(result, Exception):
