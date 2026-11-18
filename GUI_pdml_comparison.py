@@ -1,6 +1,8 @@
 import os
 import subprocess
 import sys
+import threading
+import queue
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, PhotoImage, StringVar, ttk
@@ -8,8 +10,6 @@ import tkinter.font as tkfont
 from PIL import ImageTk, Image
 import csv
 from tabulate import tabulate
-import re
-
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -18,6 +18,8 @@ except ImportError:
     DND_AVAILABLE = False
 
 MAIN_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "C-V2XMsgExchangeAssess.py")
+PROGRESS_PREFIX = "[PROGRESS] "  # matches PROGRESS_PREFIX in C-V2XMsgExchangeAssess.py
+LIVE_PREFIX = "[PROGRESS-LIVE] "  # matches LIVE_PREFIX in C-V2XMsgExchangeAssess.py
 
 def resource_path(relative_path):
     try:
@@ -30,6 +32,7 @@ def add_hover_effect(button, normal_color, hover_color):
     button.bind("<Enter>", lambda event: button.config(bg=hover_color))
     button.bind("<Leave>", lambda event: button.config(bg=normal_color))
 
+# Drag & drop PDML files
 def enable_file_drop(widget, target_var, normal_bg="white", hover_bg="#d9e8fb"):
     if not DND_AVAILABLE:
         return
@@ -92,6 +95,7 @@ class C_V2X_App:
         self.root = root
         self.root.title("C-V2X Message Exchange Analyzer")
         self.root.geometry("750x850")
+        self.root.minsize(650, 600)
         self.root.config(background="#e3e9f8")
         
         try:
@@ -183,6 +187,9 @@ class MainPage(tk.Frame):
         self.dropzone2 = create_drop_zone(self, self.file2_path, self.browse_file2)
         self.dropzone2.grid(row=8, column=0, columnspan=3, padx=8, pady=(0, 8), sticky="ew")
 
+        # Wrap the file path labels to the page width so long paths stay inside the window
+        self.bind("<Configure>", self.update_path_wraplength, add="+")
+
         # Separator below the Rx PDML section
         ttk.Separator(self, orient="horizontal").grid(row=9, column=0, columnspan=3, padx=8, pady=(2, 6), sticky="ew")
 
@@ -216,6 +223,14 @@ class MainPage(tk.Frame):
         self.csv_btn.grid(row=13, column=0, padx=8, pady=8, sticky="w")
         add_hover_effect(self.csv_btn, SMALL_BUTTON_BEFORE, SMALL_BUTTON_AFTER)
 
+    # Wraps PDML file directory text
+    def update_path_wraplength(self, event):
+        if event.widget is not self:
+            return
+        wrap = max(event.width - 24, 50)
+        self.entry1.config(wraplength=wrap)
+        self.entry2.config(wraplength=wrap)
+
     def browse_file1(self):
         path = filedialog.askopenfilename(filetypes=[("PDML files", "*.pdml"), ("All files", "*.*")])
         if path:
@@ -241,9 +256,6 @@ class MainPage(tk.Frame):
         f1 = self.file1_path.get().strip()
         f2 = self.file2_path.get().strip()
 
-        f1_basename = os.path.basename(os.path.normpath(f1))
-        f2_basename = os.path.basename(os.path.normpath(f2))
-
         if not os.path.isfile(f1) or not os.path.isfile(f2):
             messagebox.showwarning("Missing files", "Please select both PDML files first.")
             return
@@ -253,15 +265,87 @@ class MainPage(tk.Frame):
             return
         self.output_box.delete("1.0", tk.END)
         self.output_box.insert(tk.END, "Running comparison, please wait...\n")
-        self.controller.root.update_idletasks()
+        self.compare_btn.config(state="disabled", text="Running...")
 
-        try:
-            result = subprocess.run(
-                [sys.executable, MAIN_SCRIPT, f1, f2],
-                capture_output=True, text=True, check=False
-            )
-        except Exception as e:
-            messagebox.showerror("Error running script", str(e))
+        # Run the script in a background thread so the Tk event loop keeps running
+        self._compare_result = None
+        self._progress_queue = queue.Queue()
+        self._live_line_shown = False
+
+        def worker():
+            try:
+                proc = subprocess.Popen(
+                    [sys.executable, MAIN_SCRIPT, f1, f2],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, bufsize=1
+                )
+                err_lines = []
+
+                # Read stderr line by line as it arrives: progress lines go to the
+                # queue for the GUI, anything else is kept as error text.
+                def read_stderr():
+                    for line in proc.stderr:
+                        if line.startswith(LIVE_PREFIX):
+                            self._progress_queue.put((True, line[len(LIVE_PREFIX):].rstrip()))
+                        elif line.startswith(PROGRESS_PREFIX):
+                            self._progress_queue.put((False, line[len(PROGRESS_PREFIX):].rstrip()))
+                        else:
+                            err_lines.append(line)
+
+                stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+                stderr_thread.start()
+                stdout = proc.stdout.read()
+                stderr_thread.join()
+                returncode = proc.wait()
+                self._compare_result = subprocess.CompletedProcess(
+                    proc.args, returncode, stdout, "".join(err_lines))
+            except Exception as e:
+                self._compare_result = e
+
+        self._compare_thread = threading.Thread(target=worker, daemon=True)
+        self._compare_thread.start()
+        self.after(100, self._check_compare)
+
+    # Connects script & window
+    def _check_compare(self):
+        # Show any progress messages received since the last poll
+        while True:
+            try:
+                is_live, msg = self._progress_queue.get_nowait()
+            except queue.Empty:
+                break
+            self._show_progress(msg, is_live)
+
+        if self._compare_thread.is_alive():
+            self.after(100, self._check_compare)
+            return
+
+        self._finish_compare()
+
+    # Writes a progress message to the output box. A live message (e.g. a rising
+    # packet counter) replaces the previous live message instead of adding a line;
+    # the next regular message replaces the last live one as well.
+    def _show_progress(self, msg, is_live):
+        box = self.output_box
+        if self._live_line_shown:
+            box.delete("live_start", "end-1c")
+        if is_live:
+            box.mark_set("live_start", "end-1c")
+            box.mark_gravity("live_start", "left")  # stay before the text inserted next
+            box.insert(tk.END, f"    {msg}\n")
+        else:
+            box.insert(tk.END, f"> {msg}\n")
+        self._live_line_shown = is_live
+        box.see(tk.END)
+
+    # Runs once the script has finished: shows the results or the error
+    def _finish_compare(self):
+        self.compare_btn.config(state="normal", text="Compare")
+        result = self._compare_result
+
+        if isinstance(result, Exception):
+            self.output_box.delete("1.0", tk.END)
+            messagebox.showerror("Error running script", str(result))
             return
 
         self.output_box.delete("1.0", tk.END)
@@ -293,10 +377,17 @@ class MainPage(tk.Frame):
         if not os.path.isfile(coords_path):
             messagebox.showinfo("No map available", "Run a comparison first.")
             return
-        self.map_btn.config(text="Loading...")
-        self.map_btn.update()
-        subprocess.run([sys.executable, "Draw_map.py"])
-        self.map_btn.config(text="View Car Map")
+        self.map_btn.config(text="Loading...", state="disabled")
+        # Start w/o waiting, then poll so GUI stays responsive
+        proc = subprocess.Popen([sys.executable, "Draw_map.py"])
+
+        def check_map():
+            if proc.poll() is None:
+                self.after(200, check_map)
+            else:
+                self.map_btn.config(text="View Car Map", state="normal")
+
+        self.after(200, check_map)
 
 
 # Page to import & view formatted CSV of packets
@@ -469,7 +560,6 @@ class CSVPage(tk.Frame):
                 rows_found = filtered_data[msg_type]
                 if rows_found:
                     columns_layout = headers_config.get(msg_type)
-                
                     if columns_layout is not None:
                         combined_headers = []
                         for top, bot in columns_layout:
@@ -477,11 +567,8 @@ class CSVPage(tk.Frame):
                             combined_headers.append(header_text)
                 
                         table_content = rows_found
-                        
                         formatted_table = tabulate(table_content, headers=combined_headers, tablefmt="pretty")
                         textbox.insert(tk.END, formatted_table)
-
-
                     else:
                         # Generic text insert backup if a config key is missing
                         formatted_table = tabulate(rows_found, tablefmt="pretty")

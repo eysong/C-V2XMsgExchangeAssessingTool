@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import os
 import sys
 import re
 import time
@@ -47,9 +48,32 @@ def find_j2735_proto(packet):
     
 
 # Unified analyzer method for all vendors
+# Parses a PDML file like ET.parse, but reports a live count of packets read
+def parse_pdml_with_progress(path, label):
+    total_bytes = os.path.getsize(path) or 1
+    root = None
+    depth = 0
+    count = 0
+    with open(path, "rb") as f:
+        for event, elem in ET.iterparse(f, events=("start", "end")):
+            if event == "start":
+                if root is None:
+                    root = elem
+                depth += 1
+            else:
+                depth -= 1
+                if depth == 1 and elem.tag == "packet":  # direct child of <pdml>
+                    count += 1
+                    pct = min(f.tell() / total_bytes, 1.0) * 100
+                    report_live(f"Reading {label} PDML: {count:,} packets read ({pct:.0f}% of file)")
+    report_live(f"Reading {label} PDML: {count:,} packets read (100% of file)", force=True)
+    return root
+
+
 def analyze_pdml(dir, device_type):
-    tree = ET.parse(dir)
-    root = tree.getroot()
+    label = "transmitted" if device_type == "trans" else "received"
+    root = parse_pdml_with_progress(dir, label)
+    total_packets = len(root.findall("packet"))
     global t_list
     global r_list
     global tx_mac
@@ -58,7 +82,8 @@ def analyze_pdml(dir, device_type):
     has_wlan = contains_wlan(root)
     
     if device_type == "trans":
-        for packet in root:
+        for i, packet in enumerate(root, 1):
+            report_live(f"Analyzing {label} packets: {i:,} / {total_packets:,} ({i / total_packets:.0%})")
             if has_wlan == True:
                 for proto in packet:
                     udp_payload = proto.find(".//field[@name = 'udp.payload']")
@@ -72,7 +97,8 @@ def analyze_pdml(dir, device_type):
                 if j2735_proto is not None:
                     make_msg_instance(j2735_proto, "trans")
     elif device_type == "rec":
-        for packet in root:
+        for i, packet in enumerate(root, 1):
+            report_live(f"Analyzing {label} packets: {i:,} / {total_packets:,} ({i / total_packets:.0%})")
             if has_wlan == True:
                 for proto in packet:
                     udp_payload = proto.find(".//field[@name = 'udp.payload']")
@@ -87,7 +113,9 @@ def analyze_pdml(dir, device_type):
                 if j2735_proto is not None:
                     make_msg_instance(j2735_proto, "rec")
 
-    
+    # Total number of <packet> elements in the file (used for live counter)
+    return total_packets
+
 
 
 # Obtains the needed message attributes
@@ -229,27 +257,37 @@ def make_msg_instance(proto, pack_type):
                 t_list.append(SPAT(combo_id, id, revision, sequence_of_length))
 
 # Used for Folium map timestamp
+# Obtains the UTC time of the first transmitted BSM
 def first_bsm_time(dir):
-    tree = ET.parse(dir)
-    root = tree.getroot()
-    for packet in root:
-        frame_proto = packet.find(".//proto[@name = 'frame']")
-        utc_field = frame_proto.find(".//field[@name = 'frame.time_utc']")
-        return re.sub(r"\..*", "", utc_field.attrib.get("show"))
-                
+    with open(dir, "rb") as f:
+        for event, elem in ET.iterparse(f, events=("end",)):
+            if elem.tag != "packet":
+                continue
+            frame_proto = elem.find(".//proto[@name = 'frame']")
+            if frame_proto is None:
+                return None
+            utc_field = frame_proto.find(".//field[@name = 'frame.time_utc']")
+            if utc_field is None or utc_field.get("show") is None:
+                return None
+            return re.sub(r"\..*", "", utc_field.get("show"))
+    return None
+
 
 
 # Writes results in CSV format
 def final_output(dir):
     with open("coords.csv", "w") as file:
-        if first_bsm_time(dir) is not None:
-            file.write(first_bsm_time(dir)+"\n") #Initiates the timeline of Folium Map
+        start_time_utc = first_bsm_time(dir)
+        if start_time_utc is not None:
+            file.write(start_time_utc + "\n") #Initiates the timeline of Folium Map
         # Use Counter, a subclass of dicts
         t_counts = Counter(t_list)  # Key: message object, Value: occurrences
         r_counts = Counter(r_list)
+        total_msgs = len(t_counts)
 
         #Look thru tx msg
         for indx, trans_msg in enumerate(t_counts):
+            report_live(f"Comparing messages: {indx + 1:,} / {total_msgs:,} unique transmitted messages ({(indx + 1) / total_msgs:.0%})")
             #A message was successfully received if it exists in the receiver dictionary
             if trans_msg in r_counts and trans_msg is not None:
                 if trans_msg.msgType == "BSM":
@@ -286,6 +324,24 @@ def check_is_pdml(dir):
 
 #--------------------------------------
 
+# Progress msg goes to stderr with this prefix so stdout stays clean for results
+PROGRESS_PREFIX = "[PROGRESS] "
+
+def report_progress(msg):
+    print(f"{PROGRESS_PREFIX}{msg}", file=sys.stderr, flush=True)
+
+# Live progress lines
+LIVE_PREFIX = "[PROGRESS-LIVE] "
+LIVE_INTERVAL = 0.1
+_last_live_time = 0.0
+
+def report_live(msg, force=False):
+    global _last_live_time
+    now = time.time()
+    if force or now - _last_live_time >= LIVE_INTERVAL:
+        _last_live_time = now
+        print(f"{LIVE_PREFIX}{msg}", file=sys.stderr, flush=True)
+
 def main():
     try:
         t_pdml_dir = sys.argv[1]
@@ -299,10 +355,20 @@ def main():
         print("Please provide PDML files")
         sys.exit(1)
 
-    analyze_pdml(t_pdml_dir, "trans")
-    analyze_pdml(r_pdml_dir, "rec")
+    report_progress("Analyzing transmitted PDML...")
+    step_start = time.time()
+    t_packet_count = analyze_pdml(t_pdml_dir, "trans")
+    report_progress(f"Transmitted PDML analyzed: {t_packet_count:,} packets ({time.time() - step_start:.1f} s)")
 
+    report_progress("Analyzing received PDML...")
+    step_start = time.time()
+    r_packet_count = analyze_pdml(r_pdml_dir, "rec")
+    report_progress(f"Received PDML analyzed: {r_packet_count:,} packets ({time.time() - step_start:.1f} s)")
+
+    report_progress("Comparing transmitted and received messages...")
+    step_start = time.time()
     final_output(t_pdml_dir)
+    report_progress(f"Comparison complete ({time.time() - step_start:.1f} s)")
 
     end_time = time.time()
     print(f"\n\nRun time: {end_time - start_time:.3f} seconds")
